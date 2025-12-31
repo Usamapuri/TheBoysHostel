@@ -439,9 +439,6 @@ export class DatabaseStorage implements IStorage {
     if (userId) {
       orders = await baseQuery.where(eq(schema.cafe_orders.user_id, userId))
         .orderBy(desc(schema.cafe_orders.created_at));
-    } else if (orgId) {
-      orders = await baseQuery.where(eq(schema.cafe_orders.org_id, orgId))
-        .orderBy(desc(schema.cafe_orders.created_at));
     } else if (site && site !== 'all') {
       orders = await baseQuery.where(eq(schema.cafe_orders.site, site as any))
         .orderBy(desc(schema.cafe_orders.created_at));
@@ -488,7 +485,6 @@ export class DatabaseStorage implements IStorage {
       id: schema.cafe_orders.id,
       total_amount: schema.cafe_orders.total_amount,
       status: schema.cafe_orders.status,
-      billed_to: schema.cafe_orders.billed_to,
       created_by: schema.cafe_orders.created_by,
       payment_status: schema.cafe_orders.payment_status,
       payment_updated_by: schema.cafe_orders.payment_updated_by,
@@ -500,15 +496,10 @@ export class DatabaseStorage implements IStorage {
         first_name: schema.users.first_name,
         last_name: schema.users.last_name,
         email: schema.users.email,
-      },
-      organization: {
-        id: schema.organizations.id,
-        name: schema.organizations.name,
       }
     })
     .from(schema.cafe_orders)
     .leftJoin(schema.users, eq(schema.cafe_orders.user_id, schema.users.id))
-    .leftJoin(schema.organizations, eq(schema.cafe_orders.org_id, schema.organizations.id))
     .where(eq(schema.cafe_orders.id, id));
 
     if (order) {
@@ -537,8 +528,6 @@ export class DatabaseStorage implements IStorage {
       user_id: schema.cafe_orders.user_id,
       total_amount: schema.cafe_orders.total_amount,
       status: schema.cafe_orders.status,
-      billed_to: schema.cafe_orders.billed_to,
-      org_id: schema.cafe_orders.org_id,
       notes: schema.cafe_orders.notes,
       payment_status: schema.cafe_orders.payment_status,
       created_at: schema.cafe_orders.created_at,
@@ -550,14 +539,9 @@ export class DatabaseStorage implements IStorage {
         first_name: schema.users.first_name,
         last_name: schema.users.last_name,
         email: schema.users.email,
-      },
-      organization: {
-        id: schema.organizations.id,
-        name: schema.organizations.name,
       }
     }).from(schema.cafe_orders)
-      .leftJoin(schema.users, eq(schema.cafe_orders.user_id, schema.users.id))
-      .leftJoin(schema.organizations, eq(schema.cafe_orders.org_id, schema.organizations.id));
+      .leftJoin(schema.users, eq(schema.cafe_orders.user_id, schema.users.id));
 
     const conditions = [gte(schema.cafe_orders.created_at, since)];
     
@@ -720,7 +704,6 @@ export class DatabaseStorage implements IStorage {
       end_time: schema.common_room_bookings.end_time,
       credits_used: schema.common_room_bookings.credits_used,
       status: schema.common_room_bookings.status,
-      billed_to: schema.common_room_bookings.billed_to,
       notes: schema.common_room_bookings.notes,
       cancelled_by: schema.common_room_bookings.cancelled_by,
       created_at: schema.common_room_bookings.created_at,
@@ -735,16 +718,11 @@ export class DatabaseStorage implements IStorage {
         name: schema.common_rooms.name,
         capacity: schema.common_rooms.capacity,
         amenities: schema.common_rooms.amenities,
-      },
-      organization: {
-        id: schema.organizations.id,
-        name: schema.organizations.name,
       }
     })
     .from(schema.common_room_bookings)
     .leftJoin(schema.users, eq(schema.common_room_bookings.user_id, schema.users.id))
     .leftJoin(schema.common_rooms, eq(schema.common_room_bookings.room_id, schema.common_rooms.id))
-    .leftJoin(schema.organizations, eq(schema.common_room_bookings.org_id, schema.organizations.id))
     .where(eq(schema.common_room_bookings.id, id));
 
     return booking;
