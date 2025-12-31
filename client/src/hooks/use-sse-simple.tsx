@@ -1,0 +1,179 @@
+import { useEffect, useRef } from 'react';
+import { useToast } from '@/hooks/use-toast';
+import { playNotificationSound } from '@/lib/audio-notifications';
+
+interface SSEOptions {
+  endpoint: string;
+  onNewOrder?: (order: any) => void;
+  onOrderStatusUpdate?: (order: any) => void;
+  onPaymentStatusUpdate?: (order: any) => void;
+  disabled?: boolean;
+}
+
+// Track heartbeat timeout - if no heartbeat in 60 seconds, connection is dead
+const HEARTBEAT_TIMEOUT = 60000; // 60 seconds (server sends every 20s)
+
+export function useSSESimple({ endpoint, onNewOrder, onOrderStatusUpdate, onPaymentStatusUpdate, disabled }: SSEOptions) {
+  const eventSourceRef = useRef<EventSource | null>(null);
+  const reconnectTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const heartbeatTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const lastHeartbeatRef = useRef<number>(Date.now());
+  const { toast } = useToast();
+
+  // CRITICAL FIX: Store callbacks in refs to avoid stale closure issues
+  // This ensures the SSE message handler always calls the LATEST callback
+  // without needing to reconnect SSE when callbacks change
+  const onNewOrderRef = useRef(onNewOrder);
+  const onOrderStatusUpdateRef = useRef(onOrderStatusUpdate);
+  const onPaymentStatusUpdateRef = useRef(onPaymentStatusUpdate);
+
+  // Keep refs updated with latest callbacks on every render
+  useEffect(() => {
+    onNewOrderRef.current = onNewOrder;
+    onOrderStatusUpdateRef.current = onOrderStatusUpdate;
+    onPaymentStatusUpdateRef.current = onPaymentStatusUpdate;
+  });
+
+  useEffect(() => {
+    if (disabled) {
+      // Ensure any previous connection is closed if we get disabled
+      if (reconnectTimeoutRef.current) {
+        clearTimeout(reconnectTimeoutRef.current);
+        reconnectTimeoutRef.current = null as any;
+      }
+      if (heartbeatTimeoutRef.current) {
+        clearTimeout(heartbeatTimeoutRef.current);
+        heartbeatTimeoutRef.current = null as any;
+      }
+      if (eventSourceRef.current) {
+        eventSourceRef.current.close();
+        eventSourceRef.current = null;
+      }
+      return;
+    }
+
+    const resetHeartbeatTimer = () => {
+      lastHeartbeatRef.current = Date.now();
+      if (heartbeatTimeoutRef.current) {
+        clearTimeout(heartbeatTimeoutRef.current);
+      }
+      // If no heartbeat received within timeout, force reconnect
+      heartbeatTimeoutRef.current = setTimeout(() => {
+        console.warn('⚠️ No heartbeat received in 60s - SSE connection may be dead, forcing reconnect...');
+        if (eventSourceRef.current) {
+          eventSourceRef.current.close();
+          eventSourceRef.current = null;
+        }
+        connectSSE();
+      }, HEARTBEAT_TIMEOUT);
+    };
+
+    const connectSSE = () => {
+      // Clean up any existing connection
+      if (eventSourceRef.current) {
+        eventSourceRef.current.close();
+      }
+      
+      console.log('🔌 Establishing SSE connection to:', endpoint);
+      const eventSource = new EventSource(endpoint, {
+        withCredentials: true
+      });
+
+      eventSourceRef.current = eventSource;
+
+      eventSource.onopen = () => {
+        console.log('✅ SSE connection established');
+        resetHeartbeatTimer();
+      };
+
+      eventSource.onmessage = (event) => {
+        try {
+          const message = JSON.parse(event.data);
+
+          switch (message.type) {
+            case 'connected':
+              console.log('✅ SSE server confirmed connection');
+              resetHeartbeatTimer();
+              break;
+              
+            case 'order.new':
+              console.log('📦 SSE: New order received, calling callback...');
+              if (message.data) {
+                // Play audio notification for new orders
+                playNotificationSound();
+                
+                // CRITICAL: Use ref to get the LATEST callback, not stale closure
+                if (onNewOrderRef.current) {
+                  console.log('📦 SSE: Invoking onNewOrder callback for order #', message.data.id);
+                  onNewOrderRef.current(message.data);
+                }
+                toast({
+                  title: "NEW CAFE ORDER!",
+                  description: `Order #${message.data.id} from ${message.data.user?.first_name} ${message.data.user?.last_name} - PKR ${message.data.total_amount}`,
+                  duration: 15000,
+                  variant: "destructive",
+                });
+              }
+              resetHeartbeatTimer();
+              break;
+            
+            case 'order.update':
+              console.log('📦 SSE: Order update received, calling callback...');
+              if (message.data) {
+                // CRITICAL: Use ref to get the LATEST callback, not stale closure
+                if (onOrderStatusUpdateRef.current) {
+                  console.log('📦 SSE: Invoking onOrderStatusUpdate callback for order #', message.data.id);
+                  onOrderStatusUpdateRef.current(message.data);
+                }
+                toast({
+                  title: "Order Updated",
+                  description: `Order #${message.data.id} is now ${message.data.status}`,
+                  duration: 4000,
+                });
+              }
+              resetHeartbeatTimer();
+              break;
+            
+            case 'heartbeat':
+              // Heartbeat received - connection is alive
+              resetHeartbeatTimer();
+              break;
+          }
+        } catch (error) {
+          console.error('❌ Error parsing SSE message:', error);
+        }
+      };
+
+      eventSource.onerror = (error) => {
+        console.error('❌ SSE connection error:', error);
+        
+        // Attempt to reconnect after 3 seconds
+        if (eventSource.readyState === EventSource.CLOSED) {
+          console.log('🔄 SSE connection closed, attempting to reconnect in 3 seconds...');
+          reconnectTimeoutRef.current = setTimeout(() => {
+            connectSSE();
+          }, 3000);
+        }
+      };
+    };
+
+    // Initial connection
+    connectSSE();
+
+    return () => {
+      console.log('🔌 Cleaning up SSE connection');
+      if (reconnectTimeoutRef.current) {
+        clearTimeout(reconnectTimeoutRef.current);
+      }
+      if (heartbeatTimeoutRef.current) {
+        clearTimeout(heartbeatTimeoutRef.current);
+      }
+      if (eventSourceRef.current) {
+        eventSourceRef.current.close();
+        eventSourceRef.current = null;
+      }
+    };
+  }, [endpoint, disabled]); // Depend on endpoint and disabled flag
+
+  return { eventSource: eventSourceRef.current };
+}

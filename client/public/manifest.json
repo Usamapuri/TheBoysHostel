@@ -1,0 +1,67 @@
+{
+  "name": "THE BOYS HOSTEL",
+  "short_name": "THE BOYS",
+  "description": "Complete hostel management system with cafe ordering, common room booking, and community features",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#ffffff",
+  "theme_color": "#16a34a",
+  "orientation": "portrait-primary",
+  "scope": "/",
+  "lang": "en-US",
+  "categories": ["productivity", "business", "social"],
+  "icons": [
+    { "src": "/CalmKaaj_App_Icon.png?v=3", "sizes": "72x72",   "type": "image/png", "purpose": "any maskable" },
+    { "src": "/CalmKaaj_App_Icon.png?v=3", "sizes": "96x96",   "type": "image/png", "purpose": "any maskable" },
+    { "src": "/CalmKaaj_App_Icon.png?v=3", "sizes": "128x128", "type": "image/png", "purpose": "any maskable" },
+    { "src": "/CalmKaaj_App_Icon.png?v=3", "sizes": "144x144", "type": "image/png", "purpose": "any maskable" },
+    { "src": "/CalmKaaj_App_Icon.png?v=3", "sizes": "152x152", "type": "image/png", "purpose": "any maskable" },
+    { "src": "/CalmKaaj_App_Icon.png?v=3", "sizes": "180x180", "type": "image/png", "purpose": "any maskable" },
+    { "src": "/CalmKaaj_App_Icon.png?v=3", "sizes": "192x192", "type": "image/png", "purpose": "any maskable" },
+    { "src": "/CalmKaaj_App_Icon.png?v=3", "sizes": "384x384", "type": "image/png", "purpose": "any maskable" },
+    { "src": "/CalmKaaj_App_Icon.png?v=3", "sizes": "512x512", "type": "image/png", "purpose": "any maskable" }
+  ],
+  "shortcuts": [
+    {
+      "name": "Order Food",
+      "short_name": "Cafe",
+      "description": "Order food and drinks from the cafe",
+      "url": "/cafe",
+      "icons": [
+        { "src": "/ck-logo.png", "sizes": "96x96" }
+      ]
+    },
+    {
+      "name": "Book Room",
+      "short_name": "Rooms",
+      "description": "Book a common room",
+      "url": "/rooms",
+      "icons": [
+        { "src": "/ck-logo.png", "sizes": "96x96" }
+      ]
+    },
+    {
+      "name": "Community",
+      "short_name": "Community",
+      "description": "Connect with other tenants",
+      "url": "/community",
+      "icons": [
+        { "src": "/ck-logo.png", "sizes": "96x96" }
+      ]
+    }
+  ],
+  "screenshots": [
+    {
+      "src": "/logo-main.png",
+      "sizes": "1280x720",
+      "type": "image/png",
+      "form_factor": "wide"
+    },
+    {
+      "src": "/logo-main.png",
+      "sizes": "640x1136",
+      "type": "image/png",
+      "form_factor": "narrow"
+    }
+  ]
+}

@@ -1,0 +1,138 @@
+name: Deploy to Railway
+
+on:
+  push:
+    branches: [ "main" ]
+  workflow_dispatch:
+  workflow_run:
+    workflows: ["Build and Publish Docker Image"]
+    types: [completed]
+    branches: ["main"]
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    concurrency:
+      group: railway-deploy-${{ github.ref }}
+      cancel-in-progress: true
+    permissions:
+      contents: read
+    env:
+      RAILWAY_TOKEN: ${{ secrets.RAILWAY_TOKEN }}
+      RAILWAY_PROJECT_ID: ${{ secrets.RAILWAY_PROJECT_ID }}
+      RAILWAY_SERVICE: ${{ secrets.RAILWAY_SERVICE }}
+      # App secrets used during variable provisioning step
+      DATABASE_URL: ${{ secrets.DATABASE_URL }}
+      SESSION_SECRET: ${{ secrets.SESSION_SECRET }}
+      RESEND_API_KEY: ${{ secrets.RESEND_API_KEY }}
+      IMAGE_SHA: ${{ github.event.workflow_run.head_sha || github.sha }}
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      # Use official Railway Action for auth & deploy
+
+      - name: Validate Railway secrets present
+        shell: bash
+        run: |
+          if [ -z "$RAILWAY_TOKEN" ]; then echo "RAILWAY_TOKEN missing"; exit 1; fi
+          if [ -z "$RAILWAY_PROJECT_ID" ]; then echo "RAILWAY_PROJECT_ID missing"; exit 1; fi
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Install Railway CLI
+        run: npm i -g @railway/cli
+
+      - name: Deploy to Railway via CLI
+        run: |
+          if [ -n "$RAILWAY_SERVICE" ]; then
+            railway up --project "$RAILWAY_PROJECT_ID" --service "$RAILWAY_SERVICE" --ci
+          else
+            railway up --project "$RAILWAY_PROJECT_ID" --ci
+          fi
+
+      - name: Link Railway project (for variables/logs)
+        if: always()
+        run: |
+          railway link -p "$RAILWAY_PROJECT_ID" || true
+          railway status || true
+
+      - name: Resolve service to deploy
+        id: resolve_service
+        run: |
+          SERVICE_TO_DEPLOY="${RAILWAY_SERVICE:-}"
+          if [ -z "$SERVICE_TO_DEPLOY" ]; then
+            echo "Attempting to detect a service from project status JSON..."
+            SERVICE_TO_DEPLOY=$(railway status --json 2>/dev/null | grep -o '"services":\[[^]]*\]' | head -1 | grep -o '"name":"[^"]*"' | head -1 | cut -d '"' -f4 || echo "")
+          fi
+          if [ -z "$SERVICE_TO_DEPLOY" ]; then
+            echo "Could not determine a service automatically. Please add a repo secret RAILWAY_SERVICE with the service name or id."
+            echo "Current project status:"
+            railway status || true
+            exit 1
+          fi
+          echo "Resolved service: $SERVICE_TO_DEPLOY"
+          echo "SERVICE=$SERVICE_TO_DEPLOY" >> "$GITHUB_ENV"
+          railway service "$SERVICE_TO_DEPLOY"
+
+      - name: Show current Railway variables
+        run: |
+          echo "=== Current Railway Variables ==="
+          railway variables || echo "Failed to get variables"
+          
+      - name: Configure environment variables
+        run: |
+          echo "=== Setting Railway Variables ==="
+          
+          # Always set RESEND_API_KEY 
+          [ -n "$RESEND_API_KEY" ] && railway variables --set "RESEND_API_KEY=$RESEND_API_KEY" || echo "RESEND_API_KEY not set"
+          
+          # Set SESSION_SECRET if provided, otherwise use default
+          if [ -n "$SESSION_SECRET" ]; then
+            railway variables --set "SESSION_SECRET=$SESSION_SECRET"
+          else
+            railway variables --set "SESSION_SECRET=calmkaaj-super-secret-session-key-production-2025-$(date +%s)"
+          fi
+          
+          # Set DATABASE_URL if provided
+          if [ -n "$DATABASE_URL" ]; then
+            railway variables --set "DATABASE_URL=$DATABASE_URL"
+            echo "✅ DATABASE_URL set from secret"
+          else
+            echo "❌ DATABASE_URL not provided in GitHub secrets"
+            echo "🔍 Checking for existing Railway Postgres service..."
+            
+            # List all services to find postgres
+            railway services || echo "Failed to list services"
+            
+            # Try to get DATABASE_URL from postgres service
+            POSTGRES_DB_URL=$(railway variables --service postgres --json 2>/dev/null | grep -o '"DATABASE_URL":"[^"]*"' | cut -d'"' -f4 || echo "")
+            
+            if [ -n "$POSTGRES_DB_URL" ]; then
+              echo "✅ Found Postgres DATABASE_URL, setting it..."
+              railway variables --set "DATABASE_URL=$POSTGRES_DB_URL"
+            else
+              echo "⚠️ No Postgres service found. Setting a placeholder..."
+              echo "🚨 YOU MUST SET DATABASE_URL MANUALLY IN RAILWAY DASHBOARD!"
+              railway variables --set "DATABASE_URL=PLEASE_SET_DATABASE_URL_IN_RAILWAY_DASHBOARD"
+            fi
+          fi
+          
+          # Optional push keys can be configured later in Railway UI
+          
+          echo "=== Final Railway Variables ==="
+          railway variables
+
+      # Deployment handled by Railway Action above
+
+      - name: Stream recent service logs
+        if: always()
+        run: |
+          echo "📜 Tailing logs for 3 minutes..."
+          timeout 180s railway logs -s "$SERVICE" || true
+
+

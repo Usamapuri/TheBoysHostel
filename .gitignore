@@ -1,0 +1,60 @@
+# Dependencies
+node_modules/
+
+# Build outputs
+dist/
+build/
+
+# Env files
+.env
+.env.*
+
+# OS/editor
+.DS_Store
+.vscode/
+.idea/
+
+# Local runtime/data
+uploads/
+.local/
+.config/
+
+# Logs
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+node_modules/
+npm-debug.log*
+.npm
+dist/
+build/
+.env
+.env.local
+.env.development
+.env.production
+.DS_Store
+*.log
+.vscode/
+.idea/
+tmp/
+temp/
+*.tmp
+*.temp
+*.swp
+*.swo
+*~
+.cache/
+coverage/
+.nyc_output/
+calmkaaj_full_backup.sql
+verification/
+uploads/*.png
+uploads/*.jpg
+uploads/*.jpeg
+uploads/*.gif
+!uploads/.gitkeep
+.replit
+replit.nix
+*.md
+!README.md

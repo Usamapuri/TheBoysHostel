@@ -1,0 +1,513 @@
+import { useMemo, useState } from "react";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { useAuth } from "@/hooks/use-auth";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Calendar as CalendarIcon, ChevronLeft, ChevronRight, Trash2 } from "lucide-react";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { SITES } from "@/lib/constants";
+import { apiRequest } from "@/lib/queryClient";
+import { useToast } from "@/hooks/use-toast";
+
+type ViewMode = "day" | "week" | "month";
+
+function startOfDay(d: Date) { const x = new Date(d); x.setHours(0,0,0,0); return x; }
+function endOfDay(d: Date) { const x = new Date(d); x.setHours(23,59,59,999); return x; }
+function addDays(d: Date, n: number) { const x = new Date(d); x.setDate(x.getDate()+n); return x; }
+function startOfWeek(d: Date) { const x = startOfDay(d); const day = x.getDay(); const diff = (day+6)%7; x.setDate(x.getDate()-diff); return x; }
+function endOfWeek(d: Date) { return addDays(startOfWeek(d), 6); }
+function startOfMonth(d: Date) { const x = new Date(d.getFullYear(), d.getMonth(), 1); return x; }
+function endOfMonth(d: Date) { const x = new Date(d.getFullYear(), d.getMonth()+1, 0, 23,59,59,999); return x; }
+
+export default function AdminRoomSchedulePage() {
+  const { user } = useAuth();
+  const { toast } = useToast();
+  const queryClient = useQueryClient();
+  const [view, setView] = useState<ViewMode>("day");
+  const [cursor, setCursor] = useState<Date>(new Date());
+  const [showExternalModal, setShowExternalModal] = useState(false);
+  const [selectedBooking, setSelectedBooking] = useState<any | null>(null);
+  const [showDeleteModal, setShowDeleteModal] = useState(false);
+  const [bookingToDelete, setBookingToDelete] = useState<any | null>(null);
+  const [siteFilter, setSiteFilter] = useState<'all' | 'blue_area' | 'i_10'>('all');
+  const [dateFrom, setDateFrom] = useState<string>("");
+  const [dateTo, setDateTo] = useState<string>("");
+  const range = useMemo(() => {
+    if (view === "day") return { from: startOfDay(cursor), to: endOfDay(cursor) };
+    if (view === "week") return { from: startOfWeek(cursor), to: endOfWeek(cursor) };
+    return { from: startOfMonth(cursor), to: endOfMonth(cursor) };
+  }, [view, cursor]);
+
+  const { data: rooms = [] } = useQuery({ queryKey: ["/api/rooms"], staleTime: 60_000 });
+  const { data: bookings = [] } = useQuery({ queryKey: [siteFilter === 'all' ? "/api/admin/bookings" : `/api/admin/bookings?site=${siteFilter}`], staleTime: 30_000 });
+
+  // Delete booking mutation
+  const deleteBookingMutation = useMutation({
+    mutationFn: async (bookingId: number) => {
+      return apiRequest('DELETE', `/api/admin/bookings/${bookingId}`, {});
+    },
+    onSuccess: () => {
+      toast({
+        title: "Booking Deleted",
+        description: "The booking has been deleted and credits have been refunded.",
+      });
+      queryClient.invalidateQueries({ queryKey: ["/api/admin/bookings"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/bookings"] });
+      setShowDeleteModal(false);
+      setSelectedBooking(null);
+      setBookingToDelete(null);
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Deletion Failed",
+        description: error.message || "Failed to delete booking. Please try again.",
+        variant: "destructive",
+      });
+    },
+  });
+
+  // Extract all lifetime external bookings created by current admin/team user
+  const externalBookings = useMemo(() => {
+    const tag = "[EXTERNAL BOOKING]";
+    return (bookings || [])
+      .filter((b: any) => typeof b?.notes === "string" && b.notes.includes(tag))
+      .sort((a: any, b: any) => +new Date(b.created_at || b.start_time) - +new Date(a.created_at || a.start_time));
+  }, [bookings]);
+
+  const filteredExternalBookings = useMemo(() => {
+    if (!dateFrom && !dateTo) return externalBookings;
+    const from = dateFrom ? new Date(dateFrom + 'T00:00:00') : null;
+    const to = dateTo ? new Date(dateTo + 'T23:59:59') : null;
+    return externalBookings.filter((b: any) => {
+      const d = new Date(b.start_time);
+      if (from && d < from) return false;
+      if (to && d > to) return false;
+      return true;
+    });
+  }, [externalBookings, dateFrom, dateTo]);
+
+  const exportCSV = () => {
+    const rows = filteredExternalBookings.map((b: any) => {
+      const g = parseExternalGuest(b.notes);
+      return [
+        new Date(b.start_time).toLocaleDateString('en-GB'),
+        new Date(b.start_time).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+        new Date(b.end_time).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+        b.room?.name || '-',
+        b.credits_used,
+        g.name,
+        g.email,
+        g.phone,
+        (b.notes || '').replace(/\n/g, ' '),
+      ];
+    });
+    const header = ["Date","Start","End","Room","Credits","Guest Name","Guest Email","Guest Phone","Notes"];
+    const csv = [header, ...rows].map(r => r.map(v => `"${String(v ?? '').replace(/"/g,'""')}"`).join(',')).join('\n');
+    const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = 'external-bookings.csv';
+    a.click();
+    URL.revokeObjectURL(url);
+  };
+
+  const parseExternalGuest = (notes?: string) => {
+    if (!notes) return { name: "", email: "", phone: "" };
+    const m = notes.match(/\[EXTERNAL BOOKING\]\s*Name:\s*([^|]+)\s*\|\s*Email:\s*([^|]+)\s*\|\s*Phone:\s*([^|\n]+)/);
+    return {
+      name: m?.[1]?.trim() || "",
+      email: m?.[2]?.trim() || "",
+      phone: m?.[3]?.trim() || "",
+    };
+  };
+
+  const filtered = useMemo(() => {
+    const fromMs = range.from.getTime();
+    const toMs = range.to.getTime();
+    return (bookings || []).filter((b: any) => {
+      const s = new Date(b.start_time).getTime();
+      const e = new Date(b.end_time).getTime();
+      // Only show confirmed bookings on the schedule (hide cancelled ones)
+      return e >= fromMs && s <= toMs && b.status !== 'cancelled';
+    });
+  }, [bookings, range]);
+
+  const groupedByRoom = useMemo(() => {
+    const map: Record<string, any[]> = {};
+    for (const r of rooms) map[r.id] = [];
+    for (const b of filtered) {
+      const key = b.room?.id ?? "unknown";
+      (map[key] ||= []).push(b);
+    }
+    for (const k of Object.keys(map)) map[k].sort((a,b) => +new Date(a.start_time) - +new Date(b.start_time));
+    return map;
+  }, [filtered, rooms]);
+
+  const title = useMemo(() => {
+    const opts: Intl.DateTimeFormatOptions = { year: "numeric", month: "short", day: "2-digit" };
+    if (view === "day") return cursor.toLocaleDateString("en-GB", opts);
+    if (view === "week") return `${startOfWeek(cursor).toLocaleDateString("en-GB", opts)} – ${endOfWeek(cursor).toLocaleDateString("en-GB", opts)}`;
+    return cursor.toLocaleDateString("en-GB", { year: "numeric", month: "long" });
+  }, [view, cursor]);
+
+  const goPrev = () => {
+    setCursor(c => view === "day" ? addDays(c,-1) : view === "week" ? addDays(c,-7) : new Date(c.getFullYear(), c.getMonth()-1, Math.min(c.getDate(), 28)));
+  };
+  const goNext = () => {
+    setCursor(c => view === "day" ? addDays(c,1) : view === "week" ? addDays(c,7) : new Date(c.getFullYear(), c.getMonth()+1, Math.min(c.getDate(), 28)));
+  };
+
+  return (
+    <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 space-y-6">
+      <Card>
+        <CardHeader className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+          <CardTitle className="flex items-center gap-2">
+            <CalendarIcon className="h-5 w-5" /> Admin Room Schedule
+          </CardTitle>
+          <div className="flex items-center gap-2">
+            <Button variant="outline" onClick={goPrev}><ChevronLeft className="h-4 w-4" /></Button>
+            <div className="min-w-[180px] text-center font-medium">{title}</div>
+            <Button variant="outline" onClick={goNext}><ChevronRight className="h-4 w-4" /></Button>
+            <Select value={view} onValueChange={(v: ViewMode) => setView(v)}>
+              <SelectTrigger className="w-[130px]"><SelectValue placeholder="View" /></SelectTrigger>
+              <SelectContent>
+                <SelectItem value="day">Daily</SelectItem>
+              </SelectContent>
+            </Select>
+            {(user?.role === 'calmkaaj_admin' || user?.role === 'calmkaaj_team') && (
+              <Button variant="default" onClick={() => setShowExternalModal(true)}>
+                External Client Bookings
+              </Button>
+            )}
+          </div>
+        </CardHeader>
+        <CardContent>
+          {view === "day" && (
+            <div className="space-y-6">
+              {/* Room rows with horizontal timelines */}
+              {rooms.map((room: any) => (
+                <div key={room.id} className="border rounded-lg">
+                  <div className="px-3 py-2 font-semibold bg-gray-50">{room.name}</div>
+                  <div className="p-3">
+                    <div className="relative bg-white border rounded w-full h-20">
+                      {/* Hour grid using repeating background for crisp ticks */}
+                      <div
+                        className="absolute inset-0 pointer-events-none"
+                        style={{
+                          backgroundImage:
+                            "repeating-linear-gradient(to right, rgba(0,0,0,0.09) 0, rgba(0,0,0,0.09) 1px, transparent 1px, transparent calc(100%/24))",
+                        }}
+                      />
+
+                      {/* Responsive hour labels laid out horizontally */}
+                      <div className="absolute top-0 left-0 right-0 px-2 text-gray-500">
+                        {/* Show every 2 hours on small screens to avoid crowding */}
+                        <div className="flex justify-between text-[11px] sm:hidden">
+                          {Array.from({ length: 13 }).map((_, i) => (
+                            <div key={i} className="whitespace-nowrap">
+                              {new Date(startOfDay(cursor).getTime() + i * 2 * 3600e3).toLocaleTimeString([], { hour: 'numeric' })}
+                            </div>
+                          ))}
+                        </div>
+                        {/* Show every hour from md and up */}
+                        <div className="hidden sm:flex justify-between text-[11px]">
+                          {Array.from({ length: 25 }).map((_, i) => (
+                            <div key={i} className="whitespace-nowrap">
+                              {new Date(startOfDay(cursor).getTime() + i * 3600e3).toLocaleTimeString([], { hour: 'numeric' })}
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+
+                      {/* bookings as horizontal blocks */}
+                      {groupedByRoom[room.id]?.map((b: any, idx: number) => {
+                        const s = new Date(b.start_time);
+                        const e = new Date(b.end_time);
+                        const dayStart = startOfDay(cursor).getTime();
+                        const clampedStart = Math.max(s.getTime(), dayStart);
+                        const clampedEnd = Math.min(e.getTime(), dayStart + 24 * 3600e3);
+                        const leftPct = ((clampedStart - dayStart) / (24 * 3600e3)) * 100;
+                        const widthPct = Math.max(1, ((clampedEnd - clampedStart) / (24 * 3600e3)) * 100);
+                        return (
+                          <div
+                            key={idx}
+                            className="absolute top-7 bottom-2 bg-green-200 text-green-900 text-xs rounded px-2 flex items-center overflow-hidden cursor-pointer hover:bg-green-300"
+                            style={{ left: `${leftPct}%`, width: `${Math.max(2.5, widthPct)}%` }}
+                            title={`${new Date(b.start_time).toLocaleTimeString([], {hour:'2-digit',minute:'2-digit'})} - ${new Date(b.end_time).toLocaleTimeString([], {hour:'2-digit',minute:'2-digit'})}`}
+                            onClick={() => setSelectedBooking(b)}
+                          >
+                            {new Date(b.start_time).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                            {" - "}
+                            {new Date(b.end_time).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                            {" • "}
+                            {b.user?.first_name} {b.user?.last_name}
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+
+          {view === "week" && (
+            <div className="overflow-x-auto">
+              <table className="min-w-full border">
+                <thead className="bg-gray-50">
+                  <tr>
+                    <th className="p-2 text-left">Room</th>
+                    {Array.from({length:7}).map((_,i)=>{
+                      const d = addDays(startOfWeek(cursor), i);
+                      return <th key={i} className="p-2 text-left">{d.toLocaleDateString('en-GB',{weekday:'short', day:'2-digit', month:'short'})}</th>
+                    })}
+                  </tr>
+                </thead>
+                <tbody>
+                  {rooms.map((room:any)=> (
+                    <tr key={room.id} className="align-top">
+                      <td className="p-2 font-medium border-r w-44">{room.name}</td>
+                      {Array.from({length:7}).map((_,i)=>{
+                        const day = addDays(startOfWeek(cursor), i);
+                        const dayBookings = (groupedByRoom[room.id]||[]).filter((b:any)=>{
+                          const s = startOfDay(new Date(b.start_time));
+                          return s.getTime() === startOfDay(day).getTime();
+                        });
+                        return (
+                          <td key={i} className="p-2 border-r">
+                            <div className="space-y-1">
+                              {dayBookings.length === 0 && <div className="text-xs text-gray-400">—</div>}
+                              {dayBookings.map((b:any,idx:number)=> (
+                                <div key={idx} className="text-xs bg-green-100 rounded px-2 py-1">
+                                  {new Date(b.start_time).toLocaleTimeString([], {hour:'2-digit',minute:'2-digit'})} • {b.user?.first_name} {b.user?.last_name}
+                                </div>
+                              ))}
+                            </div>
+                          </td>
+                        );
+                      })}
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
+
+          {view === "month" && (
+            <div className="grid grid-cols-7 gap-2">
+              {Array.from({length: 42}).map((_,i)=>{
+                const start = startOfWeek(startOfMonth(cursor));
+                const day = addDays(start, i);
+                const isCurrentMonth = day.getMonth() === cursor.getMonth();
+                const count = filtered.filter((b:any)=> {
+                  const s = startOfDay(new Date(b.start_time));
+                  return s.getTime() === startOfDay(day).getTime();
+                }).length;
+                return (
+                  <div key={i} className={`border rounded p-2 h-28 ${isCurrentMonth? 'bg-white':'bg-gray-50'}`}>
+                    <div className="text-xs text-gray-500">{day.getDate()}</div>
+                    <div className="mt-2 text-sm font-medium">{count} bookings</div>
+                  </div>
+                );
+              })}
+            </div>
+          )}
+        </CardContent>
+      </Card>
+
+      {/* Booking details modal */}
+      <Dialog open={!!selectedBooking} onOpenChange={(open) => !open && setSelectedBooking(null)}>
+        <DialogContent className="max-w-lg">
+          <DialogHeader>
+            <DialogTitle>Booking Details</DialogTitle>
+          </DialogHeader>
+          {selectedBooking && (
+            <>
+              <div className="space-y-2">
+                <div className="grid grid-cols-2 gap-2 text-sm">
+                  <div className="text-gray-500">Room</div>
+                  <div className="font-medium">{selectedBooking.room?.name || '—'}</div>
+                  <div className="text-gray-500">Start</div>
+                  <div className="font-medium">{new Date(selectedBooking.start_time).toLocaleString([], { hour: '2-digit', minute: '2-digit', day: '2-digit', month: 'short', year: 'numeric' })}</div>
+                  <div className="text-gray-500">End</div>
+                  <div className="font-medium">{new Date(selectedBooking.end_time).toLocaleString([], { hour: '2-digit', minute: '2-digit', day: '2-digit', month: 'short', year: 'numeric' })}</div>
+                  <div className="text-gray-500">Duration</div>
+                  <div className="font-medium">{
+                    (() => {
+                      const ms = +new Date(selectedBooking.end_time) - +new Date(selectedBooking.start_time);
+                      const h = Math.floor(ms / 3600000);
+                      const m = Math.round((ms % 3600000) / 60000);
+                      return `${h}h ${m}m`;
+                    })()
+                  }</div>
+                  <div className="text-gray-500">Booked By</div>
+                  <div className="font-medium">{selectedBooking.user?.first_name} {selectedBooking.user?.last_name}</div>
+                  {selectedBooking.credits_used !== undefined && (
+                    <>
+                      <div className="text-gray-500">Credits Used</div>
+                      <div className="font-medium">{selectedBooking.credits_used}</div>
+                    </>
+                  )}
+                </div>
+                {selectedBooking.notes && (
+                  <div className="mt-3">
+                    <div className="text-gray-500 text-sm mb-1">Notes</div>
+                    <div className="text-sm whitespace-pre-wrap">{selectedBooking.notes}</div>
+                  </div>
+                )}
+              </div>
+              {/* Only show delete button for future bookings */}
+              {new Date(selectedBooking.start_time) > new Date() && (
+                <DialogFooter>
+                  <Button
+                    variant="destructive"
+                    onClick={() => {
+                      setBookingToDelete(selectedBooking);
+                      setShowDeleteModal(true);
+                    }}
+                    className="w-full sm:w-auto"
+                  >
+                    <Trash2 className="h-4 w-4 mr-2" />
+                    Delete Booking
+                  </Button>
+                </DialogFooter>
+              )}
+              {/* Show message for past bookings */}
+              {new Date(selectedBooking.start_time) <= new Date() && (
+                <div className="text-sm text-gray-500 italic border-t pt-3 mt-3">
+                  Past bookings cannot be deleted
+                </div>
+              )}
+            </>
+          )}
+        </DialogContent>
+      </Dialog>
+
+      {/* Delete confirmation modal */}
+      <Dialog open={showDeleteModal} onOpenChange={setShowDeleteModal}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle>Delete booking?</DialogTitle>
+          </DialogHeader>
+          <div className="py-4">
+            <p className="text-sm text-gray-600">
+              This will remove the booking from the schedule. This action cannot be undone.
+            </p>
+          </div>
+          <DialogFooter>
+            <Button
+              variant="outline"
+              onClick={() => {
+                setShowDeleteModal(false);
+                setBookingToDelete(null);
+              }}
+            >
+              Cancel
+            </Button>
+            <Button
+              variant="destructive"
+              onClick={() => {
+                if (bookingToDelete) {
+                  deleteBookingMutation.mutate(bookingToDelete.id);
+                }
+              }}
+              disabled={deleteBookingMutation.isPending}
+            >
+              {deleteBookingMutation.isPending ? "Deleting..." : "Delete"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* External bookings modal */}
+      <Dialog open={showExternalModal} onOpenChange={setShowExternalModal}>
+        <DialogContent className="max-w-7xl w-[95vw] max-h-[90vh] flex flex-col">
+          <DialogHeader>
+            <DialogTitle>External Client Bookings (All)</DialogTitle>
+          </DialogHeader>
+          
+          {/* Filters - Fixed at top */}
+          <div className="mb-4 flex flex-col sm:flex-row gap-3 sm:items-end flex-shrink-0">
+            <div className="flex flex-col">
+              <label className="text-sm text-gray-600 mb-1">Site</label>
+              <select
+                className="border rounded px-3 py-2"
+                value={siteFilter}
+                onChange={(e)=> setSiteFilter(e.target.value as any)}
+              >
+                <option value="all">All Sites</option>
+                <option value={SITES.BLUE_AREA}>Blue Area</option>
+                <option value={SITES.I_10}>I-10</option>
+              </select>
+            </div>
+            <div className="flex flex-col">
+              <label className="text-sm text-gray-600 mb-1">From</label>
+              <input type="date" className="border rounded px-3 py-2" value={dateFrom} onChange={(e)=> setDateFrom(e.target.value)} />
+            </div>
+            <div className="flex flex-col">
+              <label className="text-sm text-gray-600 mb-1">To</label>
+              <input type="date" className="border rounded px-3 py-2" value={dateTo} onChange={(e)=> setDateTo(e.target.value)} />
+            </div>
+            <div className="flex-1" />
+            <Button onClick={exportCSV}>Export CSV</Button>
+          </div>
+          
+          {/* Scrollable table container */}
+          <div className="overflow-auto flex-1 border rounded-lg">
+            <div className="min-w-[1200px]">
+              <Table>
+                <TableHeader className="sticky top-0 bg-white z-10 shadow-sm">
+                  <TableRow>
+                    <TableHead className="whitespace-nowrap border-b-2 font-semibold">Date</TableHead>
+                    <TableHead className="whitespace-nowrap border-b-2 font-semibold">Start</TableHead>
+                    <TableHead className="whitespace-nowrap border-b-2 font-semibold">End</TableHead>
+                    <TableHead className="whitespace-nowrap border-b-2 font-semibold">Room</TableHead>
+                    <TableHead className="whitespace-nowrap border-b-2 font-semibold">Credits</TableHead>
+                    <TableHead className="whitespace-nowrap border-b-2 font-semibold min-w-[180px]">Guest Name</TableHead>
+                    <TableHead className="whitespace-nowrap border-b-2 font-semibold min-w-[220px]">Guest Email</TableHead>
+                    <TableHead className="whitespace-nowrap border-b-2 font-semibold min-w-[140px]">Guest Phone</TableHead>
+                    <TableHead className="whitespace-nowrap border-b-2 font-semibold min-w-[300px]">Notes</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {filteredExternalBookings.length === 0 ? (
+                    <TableRow>
+                      <TableCell colSpan={9} className="text-center text-gray-500 py-8">No external bookings found.</TableCell>
+                    </TableRow>
+                  ) : (
+                    filteredExternalBookings.map((b: any) => {
+                      const g = parseExternalGuest(b.notes);
+                      return (
+                        <TableRow key={b.id} className="hover:bg-gray-50">
+                          <TableCell className="whitespace-nowrap">{new Date(b.start_time).toLocaleDateString('en-GB')}</TableCell>
+                          <TableCell className="whitespace-nowrap">{new Date(b.start_time).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</TableCell>
+                          <TableCell className="whitespace-nowrap">{new Date(b.end_time).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</TableCell>
+                          <TableCell className="whitespace-nowrap">{b.room?.name || '-'}</TableCell>
+                          <TableCell className="whitespace-nowrap">{b.credits_used}</TableCell>
+                          <TableCell className="min-w-[180px]" title={g.name}>{g.name || '-'}</TableCell>
+                          <TableCell className="min-w-[220px]" title={g.email}>{g.email || '-'}</TableCell>
+                          <TableCell className="min-w-[140px]" title={g.phone}>{g.phone || '-'}</TableCell>
+                          <TableCell className="min-w-[300px]" title={b.notes}>{b.notes?.replace(/\n/g, ' ') || '-'}</TableCell>
+                        </TableRow>
+                      );
+                    })
+                  )}
+                </TableBody>
+              </Table>
+            </div>
+          </div>
+          
+          {/* Results count */}
+          <div className="text-sm text-gray-600 mt-2 flex-shrink-0">
+            Showing {filteredExternalBookings.length} booking{filteredExternalBookings.length !== 1 ? 's' : ''}
+          </div>
+        </DialogContent>
+      </Dialog>
+    </div>
+  );
+}
+
+
