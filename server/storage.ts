@@ -637,17 +637,15 @@ export class DatabaseStorage implements IStorage {
     return newBooking;
   }
 
-  async getCommonRoomBookings(userId?: number, orgId?: string, site?: string): Promise<any[]> {
+  async getCommonRoomBookings(userId?: number, site?: string): Promise<any[]> {
     let query = db.select({
       id: schema.common_room_bookings.id,
       user_id: schema.common_room_bookings.user_id,
       room_id: schema.common_room_bookings.room_id,
-      org_id: schema.common_room_bookings.org_id,
       start_time: schema.common_room_bookings.start_time,
       end_time: schema.common_room_bookings.end_time,
       credits_used: schema.common_room_bookings.credits_used,
       status: schema.common_room_bookings.status,
-      billed_to: schema.common_room_bookings.billed_to,
       notes: schema.common_room_bookings.notes,
       cancelled_by: schema.common_room_bookings.cancelled_by,
       created_at: schema.common_room_bookings.created_at,
@@ -662,24 +660,16 @@ export class DatabaseStorage implements IStorage {
         id: schema.common_rooms.id,
         name: schema.common_rooms.name,
         capacity: schema.common_rooms.capacity,
-      },
-      organization: {
-        id: schema.organizations.id,
-        name: schema.organizations.name,
       }
     })
     .from(schema.common_room_bookings)
     .leftJoin(schema.users, eq(schema.common_room_bookings.user_id, schema.users.id))
-    .leftJoin(schema.common_rooms, eq(schema.common_room_bookings.room_id, schema.common_rooms.id))
-    .leftJoin(schema.organizations, eq(schema.common_room_bookings.org_id, schema.organizations.id));
+    .leftJoin(schema.common_rooms, eq(schema.common_room_bookings.room_id, schema.common_rooms.id));
 
     // Build where conditions
     const conditions = [];
     if (userId) {
       conditions.push(eq(schema.common_room_bookings.user_id, userId));
-    }
-    if (orgId) {
-      conditions.push(eq(schema.common_room_bookings.org_id, orgId));
     }
     if (site && site !== 'all') {
       conditions.push(eq(schema.common_rooms.site, site as any));
