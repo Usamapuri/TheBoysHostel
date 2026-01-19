@@ -3,7 +3,7 @@
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
-import { Check, FileText } from "lucide-react"
+import { Check, FileText, Bell, Receipt } from "lucide-react"
 import { EditRentDialog } from "./edit-rent-dialog"
 import { generateStudentStatement } from "@/lib/generate-student-statement"
 import type { Transaction, Student, Room } from "@/lib/types"
@@ -30,6 +30,21 @@ export function TransactionLedger({ transactions, students, rooms, onMarkAsPaid,
     const room = rooms?.find((r) => r.id === student.roomId)
     
     generateStudentStatement(student, studentTransactions, room?.roomNumber)
+  }
+
+  const handleViewReceipt = (transactionId: string) => {
+    // TODO: Implement actual receipt viewing logic
+    alert(`View receipt for transaction ${transactionId} (integrate with your receipt storage system)`)
+  }
+
+  const handleRemindPayment = (studentId: string, amount: number) => {
+    const student = students.find((s) => s.id === studentId)
+    if (!student) return
+    
+    const message = encodeURIComponent(
+      `Hi ${student.name}, this is a friendly reminder about your pending payment of $${amount}. Please complete the payment at your earliest convenience. Thank you!`
+    )
+    window.open(`https://wa.me/${student.phone}?text=${message}`, '_blank')
   }
 
   // Sort by date descending
@@ -99,19 +114,45 @@ export function TransactionLedger({ transactions, students, rooms, onMarkAsPaid,
                     >
                       <FileText className="h-4 w-4" />
                     </Button>
-                    {transaction.status === "Unpaid" && transaction.type === "Rent" && (
-                      <EditRentDialog transaction={transaction} onUpdateRent={onUpdateRent} />
-                    )}
-                    {transaction.status === "Unpaid" && (
+                    
+                    {/* View Receipt for Paid transactions */}
+                    {transaction.status === "Paid" && (
                       <Button
                         size="sm"
                         variant="ghost"
-                        onClick={() => onMarkAsPaid(transaction.id)}
-                        className="h-8 px-2 text-success hover:text-success hover:bg-success/10"
-                        title="Mark as Paid"
+                        onClick={() => handleViewReceipt(transaction.id)}
+                        className="h-8 px-2 text-muted-foreground hover:text-foreground hover:bg-accent"
+                        title="View Receipt"
                       >
-                        <Check className="h-4 w-4" />
+                        <Receipt className="h-4 w-4" />
                       </Button>
+                    )}
+                    
+                    {/* Unpaid transaction actions */}
+                    {transaction.status === "Unpaid" && (
+                      <>
+                        {transaction.type === "Rent" && (
+                          <EditRentDialog transaction={transaction} onUpdateRent={onUpdateRent} />
+                        )}
+                        <Button
+                          size="sm"
+                          variant="ghost"
+                          onClick={() => handleRemindPayment(transaction.studentId, transaction.amount)}
+                          className="h-8 px-2 text-warning hover:text-warning hover:bg-warning/10"
+                          title="Send Reminder"
+                        >
+                          <Bell className="h-4 w-4" />
+                        </Button>
+                        <Button
+                          size="sm"
+                          variant="ghost"
+                          onClick={() => onMarkAsPaid(transaction.id)}
+                          className="h-8 px-2 text-success hover:text-success hover:bg-success/10"
+                          title="Mark as Paid"
+                        >
+                          <Check className="h-4 w-4" />
+                        </Button>
+                      </>
                     )}
                   </div>
                 </TableCell>

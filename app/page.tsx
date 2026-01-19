@@ -28,6 +28,7 @@ export default function Home() {
   const [activeTab, setActiveTab] = useState("dashboard")
   const [selectedMonth, setSelectedMonth] = useState<string | null>(null)
   const [showDefaultersFilter, setShowDefaultersFilter] = useState(false)
+  const [locationFilter, setLocationFilter] = useState<string | null>(null)
   const {
     data,
     isLoading,
@@ -153,14 +154,36 @@ export default function Home() {
                 expenses={data.expenses}
                 rooms={data.rooms}
                 locations={data.locations}
+                onLocationClick={(locationName) => setLocationFilter(locationName)}
               />
             </div>
 
             {/* Recent Transactions - Full Width */}
             <div>
-              <h3 className="text-lg font-semibold text-foreground mb-4">Recent Transactions</h3>
+              <div className="flex items-center justify-between mb-4">
+                <h3 className="text-lg font-semibold text-foreground">Recent Transactions</h3>
+                {locationFilter && (
+                  <button
+                    onClick={() => setLocationFilter(null)}
+                    className="text-xs text-muted-foreground hover:text-foreground underline"
+                  >
+                    Clear filter: {locationFilter}
+                  </button>
+                )}
+              </div>
               <TransactionLedger
-                transactions={data.transactions.slice(0, 5)}
+                transactions={
+                  locationFilter
+                    ? data.transactions.filter((t) => {
+                        const student = data.students.find((s) => s.id === t.studentId)
+                        if (!student) return false
+                        const room = data.rooms.find((r) => r.id === student.roomId)
+                        if (!room) return false
+                        const location = data.locations.find((l) => l.id === room.locationId)
+                        return location?.name === locationFilter
+                      }).slice(0, 5)
+                    : data.transactions.slice(0, 5)
+                }
                 students={data.students}
                 rooms={data.rooms}
                 onMarkAsPaid={handleMarkAsPaid}

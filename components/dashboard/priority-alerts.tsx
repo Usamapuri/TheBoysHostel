@@ -1,8 +1,11 @@
 "use client"
 
+import { useState } from "react"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
-import { AlertTriangle, DollarSign, Wrench, LogOut } from "lucide-react"
+import { Button } from "@/components/ui/button"
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
+import { AlertTriangle, DollarSign, Wrench, LogOut, MessageCircle } from "lucide-react"
 import Link from "next/link"
 import type { Student, Transaction, MaintenanceTask } from "@/lib/types"
 
@@ -19,33 +22,43 @@ interface Alert {
   description: string
   severity: "high" | "medium"
   link?: string
+  studentId?: string
+  studentPhone?: string
+  taskId?: string
+  unpaidAmount?: number
 }
 
 export function PriorityAlerts({ students, transactions, maintenanceTasks }: PriorityAlertsProps) {
+  const [assigningTask, setAssigningTask] = useState<string | null>(null)
   const alerts: Alert[] = []
-  const currentMonth = new Date().toLocaleDateString("en-US", { month: "long", year: "numeric" })
+  const now = new Date()
   
-  // 1. Unpaid students for current month
-  const unpaidStudentIds = new Set(
-    transactions
-      .filter((t) => t.month === currentMonth && t.status === "Unpaid")
-      .map((t) => t.studentId)
-  )
+  // 1. Overdue transactions (Unpaid AND past due date)
+  const overdueTransactions = transactions.filter((t) => {
+    if (t.status !== "Unpaid") return false
+    const dueDate = t.dueDate ? new Date(t.dueDate) : new Date(t.date)
+    return dueDate < now
+  })
   
-  unpaidStudentIds.forEach((studentId) => {
+  const overdueStudentIds = new Set(overdueTransactions.map((t) => t.studentId))
+  
+  overdueStudentIds.forEach((studentId) => {
     const student = students.find((s) => s.id === studentId)
     if (student) {
-      const unpaidAmount = transactions
-        .filter((t) => t.studentId === studentId && t.status === "Unpaid")
+      const unpaidAmount = overdueTransactions
+        .filter((t) => t.studentId === studentId)
         .reduce((sum, t) => sum + t.amount, 0)
       
       alerts.push({
         id: `payment-${studentId}`,
         type: "payment",
         title: `${student.name} - Payment Overdue`,
-        description: `$${unpaidAmount} unpaid for ${currentMonth}`,
+        description: `$${unpaidAmount} overdue`,
         severity: "high",
         link: `/students/${studentId}`,
+        studentId: student.id,
+        studentPhone: student.phone,
+        unpaidAmount,
       })
     }
   })
@@ -60,12 +73,12 @@ export function PriorityAlerts({ students, transactions, maintenanceTasks }: Pri
         title: `${task.title} - Room ${task.roomNumber}`,
         description: `${task.category} - Requires immediate attention`,
         severity: "high",
+        taskId: task.id,
       })
     })
   
   // 3. Students with checkout within 48 hours (mock - would need checkout date field)
   // For now, we'll check students who checked in exactly 30 days ago as a demo
-  const now = new Date()
   const twoDaysFromNow = new Date(now.getTime() + 48 * 60 * 60 * 1000)
   
   students.forEach((student) => {
@@ -106,6 +119,20 @@ export function PriorityAlerts({ students, transactions, maintenanceTasks }: Pri
       : "bg-warning/20 text-warning border-warning/50"
   }
 
+  const handleWhatsApp = (phone: string, name: string, amount: number) => {
+    const message = encodeURIComponent(
+      `Hi ${name}, this is a friendly reminder about your pending payment of $${amount}. Please complete the payment at your earliest convenience. Thank you!`
+    )
+    window.open(`https://wa.me/${phone}?text=${message}`, '_blank')
+  }
+
+  const handleQuickAssign = (taskId: string, staffMember: string) => {
+    // TODO: Implement actual task assignment logic
+    console.log(`Assigning task ${taskId} to ${staffMember}`)
+    alert(`Task assigned to ${staffMember}! (This is a demo - integrate with your backend)`)
+    setAssigningTask(null)
+  }
+
   return (
     <Card className="bg-card border-border">
       <CardHeader>
@@ -130,43 +157,70 @@ export function PriorityAlerts({ students, transactions, maintenanceTasks }: Pri
             {alerts.map((alert) => (
               <div
                 key={alert.id}
-                className={`p-4 rounded-lg border ${getAlertColor(alert.severity)} transition-colors hover:opacity-80`}
+                className={`p-4 rounded-lg border ${getAlertColor(alert.severity)} transition-colors`}
               >
-                {alert.link ? (
-                  <Link href={alert.link}>
-                    <div className="flex items-start gap-3 cursor-pointer">
-                      <div className={`mt-0.5 ${alert.severity === "high" ? "text-danger" : "text-warning"}`}>
-                        {getAlertIcon(alert.type)}
-                      </div>
-                      <div className="flex-1">
-                        <h4 className="font-medium text-foreground text-sm">{alert.title}</h4>
-                        <p className="text-xs text-muted-foreground mt-1">{alert.description}</p>
-                      </div>
-                      <Badge 
-                        variant={alert.severity === "high" ? "destructive" : "secondary"}
-                        className="text-xs"
-                      >
-                        {alert.severity}
-                      </Badge>
-                    </div>
-                  </Link>
-                ) : (
-                  <div className="flex items-start gap-3">
-                    <div className={`mt-0.5 ${alert.severity === "high" ? "text-danger" : "text-warning"}`}>
-                      {getAlertIcon(alert.type)}
-                    </div>
-                    <div className="flex-1">
-                      <h4 className="font-medium text-foreground text-sm">{alert.title}</h4>
-                      <p className="text-xs text-muted-foreground mt-1">{alert.description}</p>
-                    </div>
-                    <Badge 
-                      variant={alert.severity === "high" ? "destructive" : "secondary"}
-                      className="text-xs"
-                    >
-                      {alert.severity}
-                    </Badge>
+                <div className="flex items-start gap-3">
+                  <div className={`mt-0.5 ${alert.severity === "high" ? "text-danger" : "text-warning"}`}>
+                    {getAlertIcon(alert.type)}
                   </div>
-                )}
+                  <div className="flex-1 min-w-0">
+                    {alert.link ? (
+                      <Link href={alert.link} className="hover:underline">
+                        <h4 className="font-medium text-foreground text-sm">{alert.title}</h4>
+                      </Link>
+                    ) : (
+                      <h4 className="font-medium text-foreground text-sm">{alert.title}</h4>
+                    )}
+                    <p className="text-xs text-muted-foreground mt-1">{alert.description}</p>
+                    
+                    {/* Action buttons */}
+                    <div className="mt-3 flex gap-2">
+                      {alert.type === "payment" && alert.studentPhone && (
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          className="h-7 text-xs"
+                          onClick={() => handleWhatsApp(alert.studentPhone!, alert.title.split(' - ')[0], alert.unpaidAmount!)}
+                        >
+                          <MessageCircle className="h-3 w-3 mr-1" />
+                          WhatsApp
+                        </Button>
+                      )}
+                      
+                      {alert.type === "maintenance" && alert.taskId && (
+                        assigningTask === alert.taskId ? (
+                          <Select onValueChange={(value) => handleQuickAssign(alert.taskId!, value)}>
+                            <SelectTrigger className="h-7 w-[140px] text-xs">
+                              <SelectValue placeholder="Assign to..." />
+                            </SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="John (Plumber)">John (Plumber)</SelectItem>
+                              <SelectItem value="Mike (Electrician)">Mike (Electrician)</SelectItem>
+                              <SelectItem value="Sarah (General)">Sarah (General)</SelectItem>
+                              <SelectItem value="David (Supervisor)">David (Supervisor)</SelectItem>
+                            </SelectContent>
+                          </Select>
+                        ) : (
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            className="h-7 text-xs"
+                            onClick={() => setAssigningTask(alert.taskId!)}
+                          >
+                            <Wrench className="h-3 w-3 mr-1" />
+                            Quick Assign
+                          </Button>
+                        )
+                      )}
+                    </div>
+                  </div>
+                  <Badge 
+                    variant={alert.severity === "high" ? "destructive" : "secondary"}
+                    className="text-xs shrink-0"
+                  >
+                    {alert.severity}
+                  </Badge>
+                </div>
               </div>
             ))}
           </div>

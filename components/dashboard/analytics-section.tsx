@@ -10,9 +10,10 @@ interface AnalyticsSectionProps {
   expenses: Expense[]
   rooms: Room[]
   locations: Location[]
+  onLocationClick?: (locationName: string) => void
 }
 
-export function AnalyticsSection({ transactions, expenses, rooms, locations }: AnalyticsSectionProps) {
+export function AnalyticsSection({ transactions, expenses, rooms, locations, onLocationClick }: AnalyticsSectionProps) {
   // Generate last 6 months income vs expenses data
   const getMonthlyTrends = () => {
     const months = []
@@ -167,9 +168,15 @@ export function AnalyticsSection({ transactions, expenses, rooms, locations }: A
                 outerRadius={90}
                 paddingAngle={5}
                 dataKey="value"
+                onClick={(data) => onLocationClick && onLocationClick(data.name)}
+                cursor="pointer"
               >
                 {occupancyData.map((entry, index) => (
-                  <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
+                  <Cell 
+                    key={`cell-${index}`} 
+                    fill={COLORS[index % COLORS.length]}
+                    className="hover:opacity-80 transition-opacity"
+                  />
                 ))}
               </Pie>
               <Tooltip content={<DonutTooltip />} />
@@ -177,7 +184,11 @@ export function AnalyticsSection({ transactions, expenses, rooms, locations }: A
           </ResponsiveContainer>
           <div className="mt-4 space-y-2">
             {occupancyData.map((entry, index) => (
-              <div key={entry.name} className="flex items-center justify-between text-sm">
+              <div 
+                key={entry.name} 
+                className="flex items-center justify-between text-sm cursor-pointer hover:bg-accent/50 p-2 rounded-md transition-colors"
+                onClick={() => onLocationClick && onLocationClick(entry.name)}
+              >
                 <div className="flex items-center gap-2">
                   <div 
                     className="w-3 h-3 rounded-full" 

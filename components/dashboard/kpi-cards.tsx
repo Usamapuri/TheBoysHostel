@@ -49,22 +49,33 @@ export function KPICards({
           <div className="text-2xl font-bold text-foreground">
             {occupiedBeds} / {totalBeds} Beds
           </div>
-          <p className="text-xs text-muted-foreground">{vacantBeds} beds currently vacant</p>
+          <p className="text-[11px] text-muted-foreground/80 leading-relaxed">
+            {vacantBeds} beds currently vacant
+          </p>
           <Progress value={occupancyRate} className="h-1.5" />
         </CardContent>
       </Card>
 
-      {/* 2. Profitability Card (Replacing Collection Card) */}
-      <Card className="bg-card border-border">
+      {/* 2. Profitability Card (Replacing Collection Card) - Clickable */}
+      <Card 
+        className="bg-card border-border cursor-pointer hover:bg-accent/50 transition-colors"
+        onClick={() => {
+          if (typeof window !== 'undefined') {
+            // Trigger tab change to finance
+            const financeTab = document.querySelector('[data-tab="finance"]') as HTMLElement
+            if (financeTab) financeTab.click()
+          }
+        }}
+      >
         <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
           <CardTitle className="text-sm font-medium text-muted-foreground">Estimated Net Profit</CardTitle>
           <TrendingUp className={`h-4 w-4 ${isProfitable ? "text-success" : "text-danger"}`} />
         </CardHeader>
-        <CardContent>
+        <CardContent className="space-y-2">
           <div className={`text-2xl font-bold ${isProfitable ? "text-success" : "text-danger"}`}>
             ${Math.abs(netProfit).toFixed(0)}
           </div>
-          <p className="text-xs text-muted-foreground">
+          <p className="text-[11px] text-muted-foreground/80 leading-relaxed">
             Rev: ${totalRevenue} | Exp: ${totalExpenses}
           </p>
         </CardContent>
@@ -79,9 +90,9 @@ export function KPICards({
           <CardTitle className="text-sm font-medium text-muted-foreground">Overdue Dues</CardTitle>
           <AlertCircle className="h-4 w-4 text-warning" />
         </CardHeader>
-        <CardContent>
+        <CardContent className="space-y-1">
           <div className="text-2xl font-bold text-foreground">${overdueDues}</div>
-          <p className="text-xs text-muted-foreground">
+          <p className="text-[11px] text-muted-foreground/80 leading-relaxed">
             From {overdueStudentsCount} student(s) currently late
           </p>
         </CardContent>
@@ -98,11 +109,13 @@ export function KPICards({
           </CardTitle>
           <Wrench className={`h-4 w-4 ${highPriorityMaintenance > 0 ? "text-danger" : "text-muted-foreground"}`} />
         </CardHeader>
-        <CardContent>
+        <CardContent className="space-y-1">
           <div className={`text-2xl font-bold ${highPriorityMaintenance > 0 ? "text-danger" : "text-foreground"}`}>
             {highPriorityMaintenance > 0 ? highPriorityMaintenance : pendingMaintenance}
           </div>
-          <p className="text-xs text-muted-foreground">Total of {pendingMaintenance} tasks in queue</p>
+          <p className="text-[11px] text-muted-foreground/80 leading-relaxed">
+            Total of {pendingMaintenance} tasks in queue
+          </p>
         </CardContent>
       </Card>
     </div>
