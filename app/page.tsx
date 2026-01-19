@@ -4,6 +4,9 @@ import { useState } from "react"
 import { Header } from "@/components/header"
 import { Navigation } from "@/components/navigation"
 import { KPICards } from "@/components/dashboard/kpi-cards"
+import { CollectionStatusCard } from "@/components/dashboard/collection-status-card"
+import { AnalyticsSection } from "@/components/dashboard/analytics-section"
+import { PriorityAlerts } from "@/components/dashboard/priority-alerts"
 import { RoomGrid } from "@/components/room-grid/room-grid"
 import { StudentTable } from "@/components/students/student-table"
 import { TransactionLedger } from "@/components/finance/transaction-ledger"
@@ -13,15 +16,18 @@ import { FinanceKPICards } from "@/components/finance/finance-kpi-cards"
 import { ExpensesTable } from "@/components/finance/expenses-table"
 import { AddExpenseDialog } from "@/components/finance/add-expense-dialog"
 import { AddChargeDialog } from "@/components/finance/add-charge-dialog"
+import { FinancialInsights } from "@/components/finance/financial-insights"
+import { ReportsCenter } from "@/components/finance/reports-center"
 import { KanbanBoard } from "@/components/maintenance/kanban-board"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { useHostelData } from "@/hooks/use-hostel-data"
 import { Loader2 } from "lucide-react"
-import { calculateKPIs } from "@/lib/data-store"
+import { calculateKPIs } from "@/lib/actions"
 
 export default function Home() {
   const [activeTab, setActiveTab] = useState("dashboard")
   const [selectedMonth, setSelectedMonth] = useState<string | null>(null)
+  const [showDefaultersFilter, setShowDefaultersFilter] = useState(false)
   const {
     data,
     isLoading,
@@ -59,6 +65,18 @@ export default function Home() {
   }
 
   const occupiedBeds = data.rooms.reduce((acc, room) => acc + room.beds.filter((b) => b.isOccupied).length, 0)
+  
+  // Calculate collection data for current month
+  const currentMonth = new Date().toLocaleDateString("en-US", { month: "long", year: "numeric" })
+  const currentMonthTransactions = data.transactions.filter((t) => t.month === currentMonth)
+  const collectedThisMonth = currentMonthTransactions
+    .filter((t) => t.status === "Paid")
+    .reduce((sum, t) => sum + t.amount, 0)
+  const expectedRevenue = currentMonthTransactions.reduce((sum, t) => sum + t.amount, 0)
+  
+  const handleRemindDefaulters = () => {
+    alert("Reminder notifications sent to all defaulters! (This is a demo - integrate with email/SMS service)")
+  }
 
   const allMonths = Array.from(
     new Set([...data.transactions.map((t) => t.month), ...data.expenses.map((e) => e.month)]),
@@ -81,28 +99,73 @@ export default function Home() {
           <div className="space-y-6">
             <div>
               <h2 className="text-2xl font-bold text-foreground mb-1">Command Center</h2>
-              <p className="text-muted-foreground">Overview of hostel operations</p>
+              <p className="text-muted-foreground">Real-time insights and operational pulse</p>
             </div>
-            <KPICards
-              occupancyRate={kpis.occupancyRate}
-              totalCollected={kpis.totalCollected}
-              totalOutstanding={kpis.totalOutstanding}
-              pendingMaintenance={kpis.pendingMaintenance}
-            />
-            <div className="grid gap-6 lg:grid-cols-2">
-              <div>
-                <h3 className="text-lg font-semibold text-foreground mb-4">Recent Transactions</h3>
-                <TransactionLedger
-                  transactions={data.transactions.slice(0, 5)}
-                  students={data.students}
-                  onMarkAsPaid={handleMarkAsPaid}
-                  onUpdateRent={handleUpdateRent}
+            
+            {/* 3-Column Grid Layout */}
+            <div className="grid gap-6 lg:grid-cols-3">
+              {/* Column 1: Main KPIs */}
+              <div className="space-y-6">
+                <KPICards
+                  occupancyRate={kpis.occupancyRate}
+                  totalBeds={kpis.totalBeds}
+                  occupiedBeds={kpis.occupiedBeds}
+                  vacantBeds={kpis.vacantBeds}
+                  totalRevenue={kpis.totalRevenue}
+                  totalExpenses={kpis.totalExpenses}
+                  netProfit={kpis.netProfit}
+                  overdueDues={kpis.overdueDues}
+                  overdueStudentsCount={kpis.overdueStudentsCount}
+                  highPriorityMaintenance={kpis.highPriorityMaintenance}
+                  pendingMaintenance={kpis.pendingMaintenance}
+                  onNavigateToStudents={() => {
+                    setShowDefaultersFilter(true)
+                    setActiveTab("students")
+                  }}
+                  onNavigateToMaintenance={() => setActiveTab("maintenance")}
                 />
               </div>
+              
+              {/* Column 2: Collection Status */}
               <div>
-                <h3 className="text-lg font-semibold text-foreground mb-4">Quick Actions</h3>
-                <BillingActions onGenerateBills={handleGenerateBills} occupiedBeds={occupiedBeds} />
+                <CollectionStatusCard
+                  totalCollected={collectedThisMonth}
+                  totalExpected={expectedRevenue}
+                  onRemindDefaulters={handleRemindDefaulters}
+                />
               </div>
+              
+              {/* Column 3: Priority Alerts */}
+              <div>
+                <PriorityAlerts
+                  students={data.students}
+                  transactions={data.transactions}
+                  maintenanceTasks={data.maintenanceTasks}
+                />
+              </div>
+            </div>
+
+            {/* Analytics Section - Full Width */}
+            <div>
+              <h3 className="text-lg font-semibold text-foreground mb-4">Analytics Overview</h3>
+              <AnalyticsSection
+                transactions={data.transactions}
+                expenses={data.expenses}
+                rooms={data.rooms}
+                locations={data.locations}
+              />
+            </div>
+
+            {/* Recent Transactions - Full Width */}
+            <div>
+              <h3 className="text-lg font-semibold text-foreground mb-4">Recent Transactions</h3>
+              <TransactionLedger
+                transactions={data.transactions.slice(0, 5)}
+                students={data.students}
+                rooms={data.rooms}
+                onMarkAsPaid={handleMarkAsPaid}
+                onUpdateRent={handleUpdateRent}
+              />
             </div>
           </div>
         )}
@@ -150,6 +213,7 @@ export default function Home() {
               students={data.students}
               transactions={data.transactions}
               rooms={data.rooms}
+              initialShowDefaulters={showDefaultersFilter}
               onAddStudent={handleAddStudent}
               onUpdateStudent={handleUpdateStudent}
               onDeleteStudent={handleDeleteStudent}
@@ -175,10 +239,17 @@ export default function Home() {
               outstandingDues={monthlyKPIs.totalOutstanding}
             />
 
+            {/* Financial Insights */}
+            <div>
+              <h3 className="text-lg font-semibold text-foreground mb-4">Financial Insights</h3>
+              <FinancialInsights transactions={data.transactions} expenses={data.expenses} />
+            </div>
+
             <Tabs defaultValue="income" className="w-full">
-              <TabsList className="grid w-full grid-cols-2">
+              <TabsList className="grid w-full grid-cols-3">
                 <TabsTrigger value="income">Income (Students)</TabsTrigger>
                 <TabsTrigger value="expenses">Expenses (Hostel)</TabsTrigger>
+                <TabsTrigger value="reports">Reports</TabsTrigger>
               </TabsList>
 
               {/* Income tab with transaction ledger and one-off charges */}
@@ -187,6 +258,7 @@ export default function Home() {
                 <TransactionLedger
                   transactions={filteredTransactions}
                   students={data.students}
+                  rooms={data.rooms}
                   onMarkAsPaid={handleMarkAsPaid}
                   onUpdateRent={handleUpdateRent}
                 />
@@ -196,6 +268,15 @@ export default function Home() {
               <TabsContent value="expenses" className="space-y-4">
                 <AddExpenseDialog onAddExpense={handleAddExpense} />
                 <ExpensesTable expenses={filteredExpenses} onDeleteExpense={handleDeleteExpense} />
+              </TabsContent>
+
+              {/* Reports tab */}
+              <TabsContent value="reports" className="space-y-4">
+                <ReportsCenter 
+                  transactions={data.transactions} 
+                  expenses={data.expenses}
+                  allMonths={allMonths}
+                />
               </TabsContent>
             </Tabs>
 

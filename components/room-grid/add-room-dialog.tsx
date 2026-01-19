@@ -25,6 +25,7 @@ interface AddRoomDialogProps {
     floor: number
     capacity: number
     type: "AC" | "Non-AC"
+    baseMonthlyRent: number
     locationId: string
   }) => void
 }
@@ -34,22 +35,25 @@ export function AddRoomDialog({ open, onOpenChange, locations, onAddRoom }: AddR
   const [floor, setFloor] = useState("1")
   const [capacity, setCapacity] = useState("2")
   const [type, setType] = useState<"AC" | "Non-AC">("Non-AC")
+  const [baseMonthlyRent, setBaseMonthlyRent] = useState("500")
   const [locationId, setLocationId] = useState("")
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault()
-    if (roomNumber && floor && capacity && locationId) {
+    if (roomNumber && floor && capacity && locationId && baseMonthlyRent) {
       onAddRoom({
         roomNumber,
         floor: Number.parseInt(floor),
         capacity: Number.parseInt(capacity),
         type,
+        baseMonthlyRent: Number.parseFloat(baseMonthlyRent),
         locationId,
       })
       setRoomNumber("")
       setFloor("1")
       setCapacity("2")
       setType("Non-AC")
+      setBaseMonthlyRent("500")
       setLocationId("")
       onOpenChange(false)
     }
@@ -150,6 +154,25 @@ export function AddRoomDialog({ open, onOpenChange, locations, onAddRoom }: AddR
                   <SelectItem value="Non-AC">Non-AC</SelectItem>
                 </SelectContent>
               </Select>
+            </div>
+
+            <div className="grid gap-2">
+              <Label htmlFor="base-rent" className="text-foreground">
+                Base Monthly Rent ($)
+              </Label>
+              <Input
+                id="base-rent"
+                type="number"
+                step="0.01"
+                value={baseMonthlyRent}
+                onChange={(e) => setBaseMonthlyRent(e.target.value)}
+                placeholder="500"
+                className="bg-input border-border text-foreground"
+                required
+              />
+              <p className="text-xs text-muted-foreground">
+                Default rent for students assigned to this room
+              </p>
             </div>
           </div>
           <DialogFooter>

@@ -3,21 +3,33 @@
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
-import { Check } from "lucide-react"
+import { Check, FileText } from "lucide-react"
 import { EditRentDialog } from "./edit-rent-dialog"
-import type { Transaction, Student } from "@/lib/types"
+import { generateStudentStatement } from "@/lib/generate-student-statement"
+import type { Transaction, Student, Room } from "@/lib/types"
 
 interface TransactionLedgerProps {
   transactions: Transaction[]
   students: Student[]
+  rooms?: Room[]
   onMarkAsPaid: (transactionId: string) => void
   onUpdateRent: (transactionId: string, newAmount: number) => void
 }
 
-export function TransactionLedger({ transactions, students, onMarkAsPaid, onUpdateRent }: TransactionLedgerProps) {
+export function TransactionLedger({ transactions, students, rooms, onMarkAsPaid, onUpdateRent }: TransactionLedgerProps) {
   const getStudentName = (studentId: string) => {
     const student = students.find((s) => s.id === studentId)
     return student?.name || "Unknown"
+  }
+
+  const handleGenerateStatement = (studentId: string) => {
+    const student = students.find((s) => s.id === studentId)
+    if (!student) return
+
+    const studentTransactions = transactions.filter((t) => t.studentId === studentId)
+    const room = rooms?.find((r) => r.id === student.roomId)
+    
+    generateStudentStatement(student, studentTransactions, room?.roomNumber)
   }
 
   // Sort by date descending
@@ -34,7 +46,7 @@ export function TransactionLedger({ transactions, students, onMarkAsPaid, onUpda
             <TableHead className="text-muted-foreground">Month</TableHead>
             <TableHead className="text-muted-foreground text-right">Amount</TableHead>
             <TableHead className="text-muted-foreground text-center">Status</TableHead>
-            <TableHead className="text-muted-foreground text-center">Action</TableHead>
+            <TableHead className="text-muted-foreground text-center">Actions</TableHead>
           </TableRow>
         </TableHeader>
         <TableBody>
@@ -76,20 +88,32 @@ export function TransactionLedger({ transactions, students, onMarkAsPaid, onUpda
                     </Badge>
                   )}
                 </TableCell>
-                <TableCell className="text-center space-x-1">
-                  {transaction.status === "Unpaid" && transaction.type === "Rent" && (
-                    <EditRentDialog transaction={transaction} onUpdateRent={onUpdateRent} />
-                  )}
-                  {transaction.status === "Unpaid" && (
+                <TableCell className="text-center">
+                  <div className="flex items-center justify-center gap-1">
                     <Button
                       size="sm"
                       variant="ghost"
-                      onClick={() => onMarkAsPaid(transaction.id)}
-                      className="h-8 px-2 text-success hover:text-success hover:bg-success/10"
+                      onClick={() => handleGenerateStatement(transaction.studentId)}
+                      className="h-8 px-2 text-primary hover:text-primary hover:bg-primary/10"
+                      title="Generate Statement"
                     >
-                      <Check className="h-4 w-4 mr-1" />
+                      <FileText className="h-4 w-4" />
                     </Button>
-                  )}
+                    {transaction.status === "Unpaid" && transaction.type === "Rent" && (
+                      <EditRentDialog transaction={transaction} onUpdateRent={onUpdateRent} />
+                    )}
+                    {transaction.status === "Unpaid" && (
+                      <Button
+                        size="sm"
+                        variant="ghost"
+                        onClick={() => onMarkAsPaid(transaction.id)}
+                        className="h-8 px-2 text-success hover:text-success hover:bg-success/10"
+                        title="Mark as Paid"
+                      >
+                        <Check className="h-4 w-4" />
+                      </Button>
+                    )}
+                  </div>
                 </TableCell>
               </TableRow>
             ))

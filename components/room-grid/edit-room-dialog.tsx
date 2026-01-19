@@ -11,6 +11,7 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog"
 import { Button } from "@/components/ui/button"
+import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import type { Room } from "@/lib/types"
@@ -19,17 +20,19 @@ interface EditRoomDialogProps {
   open: boolean
   onOpenChange: (open: boolean) => void
   room: Room | null
-  onEditRoom: (roomId: string, updates: { type: "AC" | "Non-AC"; capacity: number }) => void
+  onEditRoom: (roomId: string, updates: { type: "AC" | "Non-AC"; capacity: number; baseMonthlyRent: number }) => void
 }
 
 export function EditRoomDialog({ open, onOpenChange, room, onEditRoom }: EditRoomDialogProps) {
   const [capacity, setCapacity] = useState("2")
   const [type, setType] = useState<"AC" | "Non-AC">("Non-AC")
+  const [baseMonthlyRent, setBaseMonthlyRent] = useState("500")
 
   useEffect(() => {
     if (room) {
       setCapacity(room.capacity.toString())
       setType(room.type)
+      setBaseMonthlyRent(room.baseMonthlyRent.toString())
     }
   }, [room])
 
@@ -39,6 +42,7 @@ export function EditRoomDialog({ open, onOpenChange, room, onEditRoom }: EditRoo
       onEditRoom(room.id, {
         type,
         capacity: Number.parseInt(capacity),
+        baseMonthlyRent: Number.parseFloat(baseMonthlyRent),
       })
       onOpenChange(false)
     }
@@ -84,6 +88,24 @@ export function EditRoomDialog({ open, onOpenChange, room, onEditRoom }: EditRoo
                   ))}
                 </SelectContent>
               </Select>
+            </div>
+
+            <div className="grid gap-2">
+              <Label htmlFor="base-rent" className="text-foreground">
+                Base Monthly Rent ($)
+              </Label>
+              <Input
+                id="base-rent"
+                type="number"
+                step="0.01"
+                value={baseMonthlyRent}
+                onChange={(e) => setBaseMonthlyRent(e.target.value)}
+                className="bg-input border-border text-foreground"
+                required
+              />
+              <p className="text-xs text-muted-foreground">
+                Default rent for new students in this room
+              </p>
             </div>
           </div>
           <DialogFooter>

@@ -39,11 +39,18 @@ export function useHostelData() {
   const [mounted, setMounted] = useState(false)
   const [kpis, setKpis] = useState<{
     occupancyRate: number
+    totalBeds: number
+    occupiedBeds: number
+    vacantBeds: number
     totalCollected: number
     totalOutstanding: number
     totalExpenses: number
+    totalRevenue: number
     netProfit: number
     pendingMaintenance: number
+    overdueDues: number
+    overdueStudentsCount: number
+    highPriorityMaintenance: number
   } | null>(null)
   const [isPending, startTransition] = useTransition()
 
@@ -204,9 +211,11 @@ export function useHostelData() {
     async (expenseData: {
       date: string
       month: string
-      category: "Utility" | "Maintenance" | "Salary" | "Other"
+      category: "Utility" | "Maintenance" | "Salary" | "Supplies" | "Staff" | "Other"
       amount: number
       description: string
+      vendorName?: string
+      receiptUrl?: string
     }) => {
       startTransition(async () => {
         await addExpenseAction(expenseData)

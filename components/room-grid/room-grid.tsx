@@ -118,7 +118,18 @@ export function RoomGrid({
     if (selectedStudent) {
       setTransferringStudent(selectedStudent)
       setStudentInfoOpen(false)
+      setSelectedBed(null) // Clear selected bed when transferring
       setTransferOpen(true)
+    }
+  }
+
+  const handleStudentInfoClose = (open: boolean) => {
+    setStudentInfoOpen(open)
+    if (!open) {
+      // Clear all selected states when closing student info dialog
+      setSelectedBed(null)
+      setSelectedStudent(null)
+      setSelectedRoom(null)
     }
   }
 
@@ -283,7 +294,7 @@ export function RoomGrid({
 
       <StudentInfoDialog
         open={studentInfoOpen}
-        onOpenChange={setStudentInfoOpen}
+        onOpenChange={handleStudentInfoClose}
         student={selectedStudent}
         room={selectedRoom}
         bedLabel={selectedBed?.bedLabel || ""}

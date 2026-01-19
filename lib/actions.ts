@@ -40,6 +40,7 @@ export type Room = {
     floor: number
     capacity: number
     type: "AC" | "Non-AC"
+    baseMonthlyRent: number
     locationId: string
     beds: Bed[]
 }
@@ -60,6 +61,9 @@ export type Student = {
     address?: string
     securityDeposit?: number
     securityDepositStatus?: "Paid" | "Pending" | "Refunded"
+    monthlyRent?: number
+    adminNotes?: string
+    idProofUrl?: string
 }
 
 export type Transaction = {
@@ -69,6 +73,7 @@ export type Transaction = {
     type: "Rent" | "Deposit" | "Fine" | "Penalty" | "Damage"
     status: "Paid" | "Unpaid"
     date: string
+    dueDate?: string
     month: string
     description?: string
 }
@@ -77,9 +82,11 @@ export type Expense = {
     id: string
     date: string
     month: string
-    category: "Utility" | "Maintenance" | "Salary" | "Other"
+    category: "Utility" | "Maintenance" | "Salary" | "Supplies" | "Staff" | "Other"
     amount: number
     description: string
+    vendorName?: string
+    receiptUrl?: string
 }
 
 export type ActivityLog = {
@@ -162,21 +169,25 @@ function mapPaymentStatus(status: PaymentStatus): "Paid" | "Unpaid" {
     return status === "PAID" ? "Paid" : "Unpaid"
 }
 
-function mapExpenseCategory(category: ExpenseCategory): "Utility" | "Maintenance" | "Salary" | "Other" {
-    const map: Record<ExpenseCategory, "Utility" | "Maintenance" | "Salary" | "Other"> = {
+function mapExpenseCategory(category: ExpenseCategory): "Utility" | "Maintenance" | "Salary" | "Supplies" | "Staff" | "Other" {
+    const map: Record<ExpenseCategory, "Utility" | "Maintenance" | "Salary" | "Supplies" | "Staff" | "Other"> = {
         UTILITY: "Utility",
         MAINTENANCE: "Maintenance",
         SALARY: "Salary",
+        SUPPLIES: "Supplies",
+        STAFF: "Staff",
         OTHER: "Other",
     }
     return map[category]
 }
 
-function mapExpenseCategoryToDb(category: "Utility" | "Maintenance" | "Salary" | "Other"): ExpenseCategory {
+function mapExpenseCategoryToDb(category: "Utility" | "Maintenance" | "Salary" | "Supplies" | "Staff" | "Other"): ExpenseCategory {
     const map: Record<string, ExpenseCategory> = {
         Utility: ExpenseCategory.UTILITY,
         Maintenance: ExpenseCategory.MAINTENANCE,
         Salary: ExpenseCategory.SALARY,
+        Supplies: ExpenseCategory.SUPPLIES,
+        Staff: ExpenseCategory.STAFF,
         Other: ExpenseCategory.OTHER,
     }
     return map[category]
@@ -310,6 +321,7 @@ export async function getData(): Promise<HostelData> {
             floor: room.floor,
             capacity: room.capacity,
             type: mapRoomType(room.type),
+            baseMonthlyRent: room.baseMonthlyRent,
             locationId: room.locationId,
             beds: room.beds.map((bed) => ({
                 id: bed.id,
@@ -337,6 +349,9 @@ export async function getData(): Promise<HostelData> {
             address: s.address || undefined,
             securityDeposit: s.securityDeposit || undefined,
             securityDepositStatus: s.securityDepositStatus ? mapDepositStatus(s.securityDepositStatus) : undefined,
+            monthlyRent: s.monthlyRent || undefined,
+            adminNotes: s.adminNotes || undefined,
+            idProofUrl: s.idProofUrl || undefined,
         })),
         transactions: transactions.map((t) => ({
             id: t.id,
@@ -345,6 +360,7 @@ export async function getData(): Promise<HostelData> {
             type: mapTransactionType(t.type),
             status: mapPaymentStatus(t.status),
             date: t.date.toISOString().split("T")[0],
+            dueDate: t.dueDate ? t.dueDate.toISOString().split("T")[0] : undefined,
             month: t.month,
             description: t.description || undefined,
         })),
@@ -355,6 +371,8 @@ export async function getData(): Promise<HostelData> {
             category: mapExpenseCategory(e.category),
             amount: e.amount,
             description: e.description,
+            vendorName: e.vendorName || undefined,
+            receiptUrl: e.receiptUrl || undefined,
         })),
         activityLogs: activityLogs.map((a) => ({
             id: a.id,
@@ -428,6 +446,7 @@ export async function addRoom(roomData: {
     floor: number
     capacity: number
     type: "AC" | "Non-AC"
+    baseMonthlyRent: number
     locationId: string
 }): Promise<void> {
     const bedsData = Array.from({ length: roomData.capacity }, (_, idx) => ({
@@ -441,6 +460,7 @@ export async function addRoom(roomData: {
             floor: roomData.floor,
             capacity: roomData.capacity,
             type: mapRoomTypeToDb(roomData.type),
+            baseMonthlyRent: roomData.baseMonthlyRent,
             locationId: roomData.locationId,
             beds: {
                 create: bedsData,
@@ -452,7 +472,7 @@ export async function addRoom(roomData: {
 
 export async function updateRoom(
     roomId: string,
-    updates: Partial<{ roomNumber: string; floor: number; capacity: number; type: "AC" | "Non-AC"; locationId: string }>
+    updates: Partial<{ roomNumber: string; floor: number; capacity: number; type: "AC" | "Non-AC"; baseMonthlyRent: number; locationId: string }>
 ): Promise<void> {
     const room = await prisma.room.findUnique({
         where: { id: roomId },
@@ -465,6 +485,7 @@ export async function updateRoom(
     if (updates.roomNumber) updateData.roomNumber = updates.roomNumber
     if (updates.floor) updateData.floor = updates.floor
     if (updates.type) updateData.type = mapRoomTypeToDb(updates.type)
+    if (updates.baseMonthlyRent !== undefined) updateData.baseMonthlyRent = updates.baseMonthlyRent
     if (updates.locationId) updateData.locationId = updates.locationId
 
     // Handle capacity changes
@@ -533,6 +554,11 @@ export async function addStudent(studentData: {
     emergencyContact?: { name: string; phone: string; relation: string }
     address?: string
 }): Promise<void> {
+    // Get room to fetch baseMonthlyRent if roomId is provided
+    const room = studentData.roomId ? await prisma.room.findUnique({
+        where: { id: studentData.roomId },
+    }) : null
+
     // Create student
     const student = await prisma.student.create({
         data: {
@@ -549,6 +575,8 @@ export async function addStudent(studentData: {
             address: studentData.address,
             securityDeposit: 500,
             securityDepositStatus: DepositStatus.PENDING,
+            // Set monthlyRent from room's baseMonthlyRent if room is assigned
+            monthlyRent: room?.baseMonthlyRent || 500,
         },
     })
 
@@ -618,16 +646,31 @@ export async function deleteStudent(studentId: string): Promise<void> {
 }
 
 export async function assignStudentToBed(studentId: string, bedId: string, roomId: string): Promise<void> {
+    // Get room to fetch baseMonthlyRent
+    const room = await prisma.room.findUnique({
+        where: { id: roomId },
+    })
+
     // Update bed status
     await prisma.bed.update({
         where: { id: bedId },
         data: { isOccupied: true },
     })
 
-    // Update student
+    // Get current student to check if they already have a monthlyRent set
+    const student = await prisma.student.findUnique({
+        where: { id: studentId },
+    })
+
+    // Update student with room assignment and set monthlyRent if not already set
     await prisma.student.update({
         where: { id: studentId },
-        data: { bedId, roomId },
+        data: { 
+            bedId, 
+            roomId,
+            // Only set monthlyRent if student doesn't have one already
+            ...((!student?.monthlyRent && room) && { monthlyRent: room.baseMonthlyRent }),
+        },
     })
 
     revalidatePath("/")
@@ -669,6 +712,11 @@ export async function checkInStudent(
     studentName: string,
     studentPhone: string
 ): Promise<void> {
+    // Get room to fetch baseMonthlyRent
+    const room = await prisma.room.findUnique({
+        where: { id: roomId },
+    })
+
     const student = await prisma.student.create({
         data: {
             name: studentName,
@@ -679,6 +727,8 @@ export async function checkInStudent(
             status: StudentStatus.ACTIVE,
             securityDeposit: 500,
             securityDepositStatus: DepositStatus.PENDING,
+            // Set monthlyRent from room's baseMonthlyRent
+            monthlyRent: room?.baseMonthlyRent || 500,
         },
     })
 
@@ -706,7 +756,11 @@ export async function checkInStudent(
 // ============================================
 
 export async function generateMonthlyBills(): Promise<void> {
-    const currentMonth = new Date().toLocaleDateString("en-US", { month: "long", year: "numeric" })
+    const now = new Date()
+    const currentMonth = now.toLocaleDateString("en-US", { month: "long", year: "numeric" })
+    
+    // Set due date to the 5th of the current month
+    const dueDate = new Date(now.getFullYear(), now.getMonth(), 5)
 
     // Get students who already have rent for this month
     const existingRentStudentIds = await prisma.transaction
@@ -731,10 +785,11 @@ export async function generateMonthlyBills(): Promise<void> {
     await prisma.transaction.createMany({
         data: studentsWithoutRent.map((student) => ({
             studentId: student.id,
-            amount: 500,
+            amount: student.monthlyRent || 500,
             type: TransactionType.RENT,
             status: PaymentStatus.UNPAID,
-            date: new Date(),
+            date: now,
+            dueDate: dueDate,
             month: currentMonth,
         })),
     })
@@ -756,14 +811,19 @@ export async function addOneOffCharge(
     amount: number,
     description: string
 ): Promise<void> {
+    const now = new Date()
+    const dueDate = new Date(now)
+    dueDate.setDate(dueDate.getDate() + 3) // Due in 3 days
+    
     await prisma.transaction.create({
         data: {
             studentId,
             amount,
             type: mapTransactionTypeToDb(type),
             status: PaymentStatus.UNPAID,
-            date: new Date(),
-            month: new Date().toLocaleDateString("en-US", { month: "long", year: "numeric" }),
+            date: now,
+            dueDate: dueDate,
+            month: now.toLocaleDateString("en-US", { month: "long", year: "numeric" }),
             description,
         },
     })
@@ -785,9 +845,11 @@ export async function updateRentAmount(transactionId: string, newAmount: number)
 export async function addExpense(expenseData: {
     date: string
     month: string
-    category: "Utility" | "Maintenance" | "Salary" | "Other"
+    category: "Utility" | "Maintenance" | "Salary" | "Supplies" | "Staff" | "Other"
     amount: number
     description: string
+    vendorName?: string
+    receiptUrl?: string
 }): Promise<void> {
     await prisma.expense.create({
         data: {
@@ -796,6 +858,8 @@ export async function addExpense(expenseData: {
             category: mapExpenseCategoryToDb(expenseData.category),
             amount: expenseData.amount,
             description: expenseData.description,
+            vendorName: expenseData.vendorName || null,
+            receiptUrl: expenseData.receiptUrl || null,
         },
     })
     revalidatePath("/")
@@ -939,12 +1003,137 @@ export async function calculateKPIs(selectedMonth?: string) {
         .filter((t) => t.status === PaymentStatus.UNPAID)
         .reduce((acc, t) => acc + t.amount, 0)
 
+    // Calculate overdue dues (unpaid transactions with past due dates)
+    const now = new Date()
+    const overdueTransactions = transactions.filter((t) => {
+        if (t.status !== PaymentStatus.UNPAID) return false
+        const dueDate = new Date(t.dueDate || t.date)
+        return dueDate < now
+    })
+    
+    const overdueDues = overdueTransactions.reduce((acc, t) => acc + t.amount, 0)
+    const overdueStudentIds = new Set(overdueTransactions.map((t) => t.studentId))
+    const overdueStudentsCount = overdueStudentIds.size
+
+    // Count high-priority maintenance tasks
+    const highPriorityTasks = maintenanceTasks.filter((t) => t.priority === Priority.HIGH)
+    const highPriorityCount = highPriorityTasks.length
+
     return {
         occupancyRate: totalBeds > 0 ? Math.round((occupiedBeds / totalBeds) * 100) : 0,
+        totalBeds,
+        occupiedBeds,
+        vacantBeds: totalBeds - occupiedBeds,
         totalCollected: revenue,
         totalOutstanding: outstanding,
         totalExpenses,
+        totalRevenue: revenue,
         netProfit: revenue - totalExpenses,
         pendingMaintenance: maintenanceTasks.length,
+        overdueDues,
+        overdueStudentsCount,
+        highPriorityMaintenance: highPriorityCount,
+    }
+}
+
+// ============================================
+// HELPER FUNCTIONS FOR STUDENT DETAIL PAGE
+// ============================================
+
+export async function getStudentById(studentId: string): Promise<Student | null> {
+    const student = await prisma.student.findUnique({
+        where: { id: studentId },
+    })
+
+    if (!student) return null
+
+    return {
+        id: student.id,
+        name: student.name,
+        phone: student.phone,
+        email: student.email || undefined,
+        bedId: student.bedId || "",
+        roomId: student.roomId || "",
+        checkInDate: student.checkInDate.toISOString().split("T")[0],
+        emergencyContact: student.emergencyContactName
+            ? {
+                name: student.emergencyContactName,
+                phone: student.emergencyContactPhone || "",
+                relation: student.emergencyContactRelation || "",
+            }
+            : undefined,
+        address: student.address || undefined,
+        securityDeposit: student.securityDeposit || undefined,
+        securityDepositStatus: student.securityDepositStatus ? mapDepositStatus(student.securityDepositStatus) : undefined,
+        monthlyRent: student.monthlyRent || undefined,
+        adminNotes: student.adminNotes || undefined,
+        idProofUrl: student.idProofUrl || undefined,
+    }
+}
+
+export async function getStudentTransactions(studentId: string): Promise<Transaction[]> {
+    const transactions = await prisma.transaction.findMany({
+        where: { studentId },
+        orderBy: { date: 'desc' },
+    })
+
+    return transactions.map((t) => ({
+        id: t.id,
+        studentId: t.studentId,
+        amount: t.amount,
+        type: mapTransactionType(t.type),
+        status: mapPaymentStatus(t.status),
+        date: t.date.toISOString().split("T")[0],
+        dueDate: t.dueDate ? t.dueDate.toISOString().split("T")[0] : undefined,
+        month: t.month,
+        description: t.description || undefined,
+    }))
+}
+
+export async function getStudentActivityLogs(studentId: string): Promise<ActivityLog[]> {
+    const activityLogs = await prisma.activityLog.findMany({
+        where: { studentId },
+        orderBy: { date: 'desc' },
+    })
+
+    return activityLogs.map((a) => ({
+        id: a.id,
+        studentId: a.studentId,
+        type: mapActivityType(a.type),
+        description: a.description,
+        date: a.date.toISOString().split("T")[0],
+        status: mapActivityStatus(a.status),
+    }))
+}
+
+export async function getRoomById(roomId: string): Promise<Room | null> {
+    const room = await prisma.room.findUnique({
+        where: { id: roomId },
+        include: {
+            beds: {
+                include: {
+                    student: true,
+                },
+            },
+        },
+    })
+
+    if (!room) return null
+
+    return {
+        id: room.id,
+        roomNumber: room.roomNumber,
+        floor: room.floor,
+        capacity: room.capacity,
+        type: mapRoomType(room.type),
+        baseMonthlyRent: room.baseMonthlyRent,
+        locationId: room.locationId,
+        beds: room.beds.map((bed) => ({
+            id: bed.id,
+            roomId: bed.roomId,
+            label: bed.label,
+            isOccupied: bed.isOccupied,
+            studentId: bed.student?.id,
+        })),
     }
 }

@@ -17,6 +17,7 @@ interface StudentTableProps {
   students: Student[]
   transactions: Transaction[]
   rooms: Room[]
+  initialShowDefaulters?: boolean
   onAddStudent: (data: {
     name: string
     phone: string
@@ -33,11 +34,12 @@ export function StudentTable({
   students,
   transactions,
   rooms,
+  initialShowDefaulters = false,
   onAddStudent,
   onUpdateStudent,
   onDeleteStudent,
 }: StudentTableProps) {
-  const [showDefaultersOnly, setShowDefaultersOnly] = useState(false)
+  const [showDefaultersOnly, setShowDefaultersOnly] = useState(initialShowDefaulters)
   const [editingStudent, setEditingStudent] = useState<Student | null>(null)
   const [deletingStudent, setDeletingStudent] = useState<Student | null>(null)
 
@@ -50,6 +52,10 @@ export function StudentTable({
     const room = rooms.find((r) => r.id === roomId)
     const bed = room?.beds.find((b) => b.id === bedId)
     return bed?.label || ""
+  }
+
+  const getRoomDetails = (roomId: string) => {
+    return rooms.find((r) => r.id === roomId)
   }
 
   const getBalanceStatus = (studentId: string) => {
@@ -81,6 +87,7 @@ export function StudentTable({
               <TableHead className="text-muted-foreground">Name</TableHead>
               <TableHead className="text-muted-foreground">Phone</TableHead>
               <TableHead className="text-muted-foreground">Room</TableHead>
+              <TableHead className="text-muted-foreground">Monthly Rent</TableHead>
               <TableHead className="text-muted-foreground">Check-in Date</TableHead>
               <TableHead className="text-muted-foreground text-right">Balance</TableHead>
               <TableHead className="text-muted-foreground text-center">Actions</TableHead>
@@ -89,13 +96,14 @@ export function StudentTable({
           <TableBody>
             {filteredStudents.length === 0 ? (
               <TableRow>
-                <TableCell colSpan={6} className="text-center text-muted-foreground py-8">
+                <TableCell colSpan={7} className="text-center text-muted-foreground py-8">
                   {showDefaultersOnly ? "No defaulters found" : "No students checked in yet"}
                 </TableCell>
               </TableRow>
             ) : (
               filteredStudents.map((student) => {
                 const balance = getBalanceStatus(student.id)
+                const room = getRoomDetails(student.roomId)
                 return (
                   <TableRow key={student.id} className="border-border">
                     <TableCell className="font-medium">
@@ -108,7 +116,25 @@ export function StudentTable({
                     </TableCell>
                     <TableCell className="text-muted-foreground">{student.phone}</TableCell>
                     <TableCell className="text-foreground">
-                      {getRoomNumber(student.roomId)}-{getBedLabel(student.bedId, student.roomId)}
+                      <div className="flex items-center gap-2">
+                        <span>{getRoomNumber(student.roomId)}-{getBedLabel(student.bedId, student.roomId)}</span>
+                        {room && (
+                          <div className="flex gap-1">
+                            <Badge 
+                              variant="outline" 
+                              className={room.type === "AC" ? "border-primary/50 text-primary text-xs" : "border-muted-foreground/50 text-muted-foreground text-xs"}
+                            >
+                              {room.type}
+                            </Badge>
+                            <Badge variant="outline" className="border-muted-foreground/50 text-muted-foreground text-xs">
+                              {room.capacity}-S
+                            </Badge>
+                          </div>
+                        )}
+                      </div>
+                    </TableCell>
+                    <TableCell className="text-foreground font-medium">
+                      ${student.monthlyRent || room?.baseMonthlyRent || 500}
                     </TableCell>
                     <TableCell className="text-muted-foreground">
                       {new Date(student.checkInDate).toLocaleDateString()}

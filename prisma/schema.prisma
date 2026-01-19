@@ -29,6 +29,7 @@ model Room {
   floor            Int
   capacity         Int
   type             RoomType
+  baseMonthlyRent  Float             @default(500)
   locationId       String
   location         Location          @relation(fields: [locationId], references: [id])
   beds             Bed[]
@@ -73,6 +74,9 @@ model Student {
   address                  String?
   securityDeposit          Float?
   securityDepositStatus    DepositStatus @default(PENDING)
+  monthlyRent              Float?
+  adminNotes               String?
+  idProofUrl               String?
   bed                      Bed?          @relation(fields: [bedId], references: [id])
   transactions             Transaction[]
   activityLogs             ActivityLog[]
@@ -103,6 +107,7 @@ model Transaction {
   type        TransactionType
   status      PaymentStatus   @default(UNPAID)
   date        DateTime
+  dueDate     DateTime? // Optional due date for overdue tracking
   month       String // e.g., "January 2026" for filtering
   description String?
   student     Student         @relation(fields: [studentId], references: [id], onDelete: Cascade)
@@ -130,6 +135,8 @@ model Expense {
   category    ExpenseCategory
   amount      Float
   description String
+  vendorName  String?
+  receiptUrl  String?
 
   createdAt DateTime @default(now())
 }
@@ -138,6 +145,8 @@ enum ExpenseCategory {
   UTILITY
   MAINTENANCE
   SALARY
+  SUPPLIES
+  STAFF
   OTHER
 }
 

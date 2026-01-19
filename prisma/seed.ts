@@ -237,13 +237,13 @@ async function main() {
     // Create Transactions
     console.log("💰 Creating transactions...")
     const transactionsData = [
-        { studentIndex: 0, amount: 500, type: TransactionType.DEPOSIT, status: PaymentStatus.PAID, date: new Date("2025-12-01"), month: "December 2025" },
-        { studentIndex: 0, amount: 500, type: TransactionType.RENT, status: PaymentStatus.PAID, date: new Date("2025-12-01"), month: "December 2025" },
-        { studentIndex: 1, amount: 500, type: TransactionType.DEPOSIT, status: PaymentStatus.PAID, date: new Date("2025-12-05"), month: "December 2025" },
-        { studentIndex: 1, amount: 500, type: TransactionType.RENT, status: PaymentStatus.UNPAID, date: new Date("2025-12-05"), month: "December 2025" },
-        { studentIndex: 2, amount: 500, type: TransactionType.RENT, status: PaymentStatus.UNPAID, date: new Date("2025-12-01"), month: "December 2025" },
-        { studentIndex: 3, amount: 500, type: TransactionType.DEPOSIT, status: PaymentStatus.PAID, date: new Date("2025-12-10"), month: "December 2025" },
-        { studentIndex: 4, amount: 500, type: TransactionType.RENT, status: PaymentStatus.PAID, date: new Date("2025-12-01"), month: "December 2025" },
+        { studentIndex: 0, amount: 500, type: TransactionType.DEPOSIT, status: PaymentStatus.PAID, date: new Date("2025-12-01"), dueDate: new Date("2025-12-01"), month: "December 2025" },
+        { studentIndex: 0, amount: 500, type: TransactionType.RENT, status: PaymentStatus.PAID, date: new Date("2025-12-01"), dueDate: new Date("2025-12-05"), month: "December 2025" },
+        { studentIndex: 1, amount: 500, type: TransactionType.DEPOSIT, status: PaymentStatus.PAID, date: new Date("2025-12-05"), dueDate: new Date("2025-12-05"), month: "December 2025" },
+        { studentIndex: 1, amount: 500, type: TransactionType.RENT, status: PaymentStatus.UNPAID, date: new Date("2025-12-05"), dueDate: new Date("2025-12-10"), month: "December 2025" },
+        { studentIndex: 2, amount: 500, type: TransactionType.RENT, status: PaymentStatus.UNPAID, date: new Date("2025-12-01"), dueDate: new Date("2026-01-05"), month: "December 2025" },
+        { studentIndex: 3, amount: 500, type: TransactionType.DEPOSIT, status: PaymentStatus.PAID, date: new Date("2025-12-10"), dueDate: new Date("2025-12-10"), month: "December 2025" },
+        { studentIndex: 4, amount: 500, type: TransactionType.RENT, status: PaymentStatus.PAID, date: new Date("2025-12-01"), dueDate: new Date("2025-12-05"), month: "December 2025" },
     ]
 
     for (const txData of transactionsData) {
@@ -254,6 +254,7 @@ async function main() {
                 type: txData.type,
                 status: txData.status,
                 date: txData.date,
+                dueDate: txData.dueDate,
                 month: txData.month,
             },
         })

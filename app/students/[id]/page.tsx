@@ -1,15 +1,15 @@
-"use client"
-
 import { use } from "react"
-import { useRouter } from "next/navigation"
 import Link from "next/link"
+import { redirect } from "next/navigation"
 import { Header } from "@/components/header"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
-import { getData, getStudentTransactions, getStudentActivityLogs } from "@/lib/data-store"
+import { getStudentById, getStudentTransactions, getStudentActivityLogs, getRoomById, updateStudent } from "@/lib/actions"
+import { FinancialSettingsCard } from "@/components/students/financial-settings-card"
+import { DocumentsSection } from "@/components/students/documents-section"
 import {
   ArrowLeft,
   User,
@@ -24,24 +24,16 @@ import {
   ClipboardList,
 } from "lucide-react"
 
-function BackButton() {
-  const router = useRouter()
-  return (
-    <Button variant="ghost" className="mb-4 text-muted-foreground hover:text-foreground" onClick={() => router.back()}>
-      <ArrowLeft className="h-4 w-4 mr-2" />
-      Back to Directory
-    </Button>
-  )
-}
+export default async function StudentDetailPage({ params }: { params: Promise<{ id: string }> }) {
+  const { id } = await params
 
-export default function StudentDetailPage({ params }: { params: Promise<{ id: string }> }) {
-  const { id } = use(params)
+  const [student, transactions, activityLogs] = await Promise.all([
+    getStudentById(id),
+    getStudentTransactions(id),
+    getStudentActivityLogs(id),
+  ])
 
-  const data = getData()
-  const student = data.students.find((s) => s.id === id)
-  const transactions = student ? getStudentTransactions(data, id) : []
-  const activityLogs = student ? getStudentActivityLogs(data, id) : []
-  const room = student ? data.rooms.find((r) => r.id === student.roomId) : null
+  const room = student?.roomId ? await getRoomById(student.roomId) : null
 
   if (!student) {
     return (
@@ -51,8 +43,8 @@ export default function StudentDetailPage({ params }: { params: Promise<{ id: st
           <div className="text-center py-12">
             <h2 className="text-xl font-semibold text-foreground mb-2">Student Not Found</h2>
             <p className="text-muted-foreground mb-4">The student you&apos;re looking for doesn&apos;t exist.</p>
-            <Link href="/">
-              <Button>Go Back Home</Button>
+            <Link href="/?tab=students">
+              <Button>Go Back to Students</Button>
             </Link>
           </div>
         </main>
@@ -92,13 +84,23 @@ export default function StudentDetailPage({ params }: { params: Promise<{ id: st
     }
   }
 
+  const handleUpdateStudent = async (updates: any) => {
+    "use server"
+    await updateStudent(id, updates)
+  }
+
   return (
     <div className="min-h-screen bg-background">
       <Header />
       <main className="container mx-auto px-4 py-6">
         {/* Back button and header */}
         <div className="mb-6">
-          <BackButton />
+          <Link href="/?tab=students">
+            <Button variant="ghost" className="mb-4 text-muted-foreground hover:text-foreground">
+              <ArrowLeft className="h-4 w-4 mr-2" />
+              Back to Directory
+            </Button>
+          </Link>
           <div className="flex items-center justify-between">
             <div>
               <h1 className="text-2xl font-bold text-foreground">{student.name}</h1>
@@ -143,6 +145,12 @@ export default function StudentDetailPage({ params }: { params: Promise<{ id: st
 
           {/* Info Tab */}
           <TabsContent value="info" className="space-y-6">
+            {/* Financial Settings */}
+            <FinancialSettingsCard student={student} onUpdate={handleUpdateStudent} />
+            
+            {/* Documents Section */}
+            <DocumentsSection student={student} onUpdate={handleUpdateStudent} />
+
             <div className="grid gap-6 md:grid-cols-2">
               {/* Personal Details */}
               <Card className="bg-card border-border">

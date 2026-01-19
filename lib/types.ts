@@ -11,6 +11,7 @@ export interface Room {
   floor: number
   capacity: number
   type: "AC" | "Non-AC"
+  baseMonthlyRent: number
   locationId: string
   beds: Bed[]
 }
@@ -39,6 +40,9 @@ export interface Student {
   address?: string
   securityDeposit?: number
   securityDepositStatus?: "Paid" | "Pending" | "Refunded"
+  monthlyRent?: number
+  adminNotes?: string
+  idProofUrl?: string
 }
 
 export interface Transaction {
@@ -48,6 +52,7 @@ export interface Transaction {
   type: "Rent" | "Deposit" | "Fine" | "Penalty" | "Damage"
   status: "Paid" | "Unpaid"
   date: string
+  dueDate?: string
   month: string // e.g., "January 2026"
   description?: string
 }
@@ -56,9 +61,11 @@ export interface Expense {
   id: string
   date: string
   month: string
-  category: "Utility" | "Maintenance" | "Salary" | "Other"
+  category: "Utility" | "Maintenance" | "Salary" | "Supplies" | "Staff" | "Other"
   amount: number
   description: string
+  vendorName?: string
+  receiptUrl?: string
 }
 
 export interface ActivityLog {
