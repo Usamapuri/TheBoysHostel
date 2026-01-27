@@ -6,10 +6,14 @@ import { getToken } from 'next-auth/jwt'
 export async function proxy(request: NextRequest) {
   const pathname = request.nextUrl.pathname
   
-  // CRITICAL: Skip all Next.js internal routes FIRST to prevent build worker interference
-  if (pathname.startsWith('/_next')) {
-    return NextResponse.next()
-  }
+  // CRITICAL BYPASS: Skip ALL static assets and Next.js internals IMMEDIATELY
+  // This prevents ANY interference with build workers and static generation
+  if (pathname.startsWith('/_next')) return NextResponse.next()
+  if (pathname.startsWith('/api')) return NextResponse.next()
+  if (pathname.startsWith('/favicon')) return NextResponse.next()
+  
+  // Skip ALL files with extensions (images, fonts, etc.)
+  if (pathname.includes('.')) return NextResponse.next()
   
   const hostname = request.headers.get('host') || ''
   
@@ -26,27 +30,13 @@ export async function proxy(request: NextRequest) {
   
   // If it's the root domain, allow access to the landing page
   if (isRootDomain) {
-    // Allow API routes (already handled above but kept for clarity)
-    if (pathname.startsWith('/api')) {
-      return NextResponse.next()
-    }
-    
-    // Allow access to public assets
-    if (pathname.startsWith('/icon') || pathname.startsWith('/placeholder') || pathname.startsWith('/apple-icon')) {
-      return NextResponse.next()
-    }
-    
     // If pathname is just /, show landing page
     if (pathname === '/') {
       return NextResponse.next()
     }
     
     // For any other route from root domain, redirect to landing
-    if (!pathname.startsWith('/landing')) {
-      return NextResponse.redirect(new URL('/', request.url))
-    }
-    
-    return NextResponse.next()
+    return NextResponse.redirect(new URL('/', request.url))
   }
   
   // Extract subdomain
@@ -70,16 +60,6 @@ export async function proxy(request: NextRequest) {
   
   // Skip rewrite if already in subdomain path
   if (pathname.startsWith(`/${subdomain}`)) {
-    return NextResponse.next()
-  }
-  
-  // Skip rewrite for API routes (Next.js internals already handled at top)
-  if (pathname.startsWith('/api')) {
-    return NextResponse.next()
-  }
-  
-  // Skip rewrite for public assets
-  if (pathname.startsWith('/icon') || pathname.startsWith('/placeholder') || pathname.startsWith('/apple-icon')) {
     return NextResponse.next()
   }
   

@@ -71,20 +71,15 @@ export function TenantProvider({
 export function useTenant() {
   const context = useContext(TenantContext)
   
-  // Return safe default instead of throwing during SSR/build
+  // IMMUNITY: NEVER throw during static generation or SSR
+  // Return safe default if context is undefined (happens during build/SSR/static generation)
   if (context === undefined) {
-    // During SSR or when outside provider, return safe defaults
-    if (typeof window === 'undefined') {
-      // Server-side: return loading state
-      return {
-        tenant: null,
-        isLoading: true,
-        error: null,
-        subdomain: '',
-      }
+    return {
+      tenant: null,
+      isLoading: false,
+      error: null,
+      subdomain: '',
     }
-    // Client-side: this is an actual error
-    throw new Error('useTenant must be used within a TenantProvider')
   }
   
   return context

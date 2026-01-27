@@ -3,6 +3,9 @@
 // ATOMIC GLOBAL ERROR - NO IMPORTS, NO CONTEXT, NO DEPENDENCIES
 // This file must be completely isolated to allow Next.js to pre-render it during build
 
+// Force dynamic rendering to prevent static generation issues
+export const dynamic = 'force-dynamic'
+
 export default function GlobalError({
   error,
   reset,

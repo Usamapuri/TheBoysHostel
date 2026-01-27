@@ -1,16 +1,14 @@
 import type React from "react"
 import type { Metadata, Viewport } from "next"
-import { Geist, Geist_Mono } from "next/font/google"
-import { Analytics } from "@vercel/analytics/next"
 import "./globals.css"
 
-const _geist = Geist({ subsets: ["latin"] })
-const _geistMono = Geist_Mono({ subsets: ["latin"] })
+// STRICT ISOLATION: NO IMPORTS FROM @/components OR @/lib
+// This root layout ONLY serves the landing page and must be build-safe
+// Tenant-specific layouts with context are in app/(tenant)/[subdomain]/layout.tsx
 
 export const metadata: Metadata = {
-  title: "THE BOYS HOSTEL Admin",
-  description: "Hostel management system for room occupancy, billing, and student management",
-  generator: "v0.app",
+  title: "HostelFlow - Multi-Tenant Hostel Management",
+  description: "Multi-tenant SaaS platform for hostel management - rooms, students, finance, and maintenance",
   icons: {
     icon: [
       {
@@ -34,9 +32,7 @@ export const viewport: Viewport = {
   themeColor: "#1a1a2e",
 }
 
-// ROOT LAYOUT - Landing Page Only
-// This layout does NOT include TenantProvider or any tenant-specific context
-// Tenant-specific layouts are in app/(tenant)/[subdomain]/layout.tsx
+// BARE-BONES ROOT LAYOUT - Build-Safe
 export default function RootLayout({
   children,
 }: Readonly<{
@@ -44,9 +40,8 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en" className="dark">
-      <body className={`font-sans antialiased`}>
+      <body className="font-sans antialiased" suppressHydrationWarning>
         {children}
-        <Analytics />
       </body>
     </html>
   )
