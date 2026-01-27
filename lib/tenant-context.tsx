@@ -70,8 +70,22 @@ export function TenantProvider({
 
 export function useTenant() {
   const context = useContext(TenantContext)
+  
+  // Return safe default instead of throwing during SSR/build
   if (context === undefined) {
+    // During SSR or when outside provider, return safe defaults
+    if (typeof window === 'undefined') {
+      // Server-side: return loading state
+      return {
+        tenant: null,
+        isLoading: true,
+        error: null,
+        subdomain: '',
+      }
+    }
+    // Client-side: this is an actual error
     throw new Error('useTenant must be used within a TenantProvider')
   }
+  
   return context
 }

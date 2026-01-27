@@ -2,7 +2,8 @@ import { NextResponse } from 'next/server'
 import type { NextRequest } from 'next/server'
 import { getToken } from 'next-auth/jwt'
 
-export async function middleware(request: NextRequest) {
+// Renamed from middleware to proxy for Next.js 16 compatibility
+export async function proxy(request: NextRequest) {
   const hostname = request.headers.get('host') || ''
   
   // Get the pathname
