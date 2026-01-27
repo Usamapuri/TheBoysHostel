@@ -71,9 +71,9 @@ export function TenantProvider({
 export function useTenant() {
   const context = useContext(TenantContext)
   
-  // IMMUNITY: NEVER throw during static generation or SSR
-  // Return safe default if context is undefined (happens during build/SSR/static generation)
-  if (context === undefined) {
+  // NULL-SAFE: Always return a safe default if no context
+  // NO errors, NO warnings, NO console logs during SSR/build/static generation
+  if (!context) {
     return {
       tenant: null,
       isLoading: false,

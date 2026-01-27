@@ -2,9 +2,16 @@ import type React from "react"
 import type { Metadata, Viewport } from "next"
 import "./globals.css"
 
-// STRICT ISOLATION: NO IMPORTS FROM @/components OR @/lib
-// This root layout ONLY serves the landing page and must be build-safe
-// Tenant-specific layouts with context are in app/(tenant)/[subdomain]/layout.tsx
+// ============================================================================
+// STRICT PARTITIONING: ROOT LAYOUT (Build-Safe Zone)
+// ============================================================================
+// This layout is COMPLETELY ISOLATED from tenant-specific code
+// NO imports from @/components (except shadcn UI primitives)
+// NO imports from @/lib (except utils)
+// NO context providers (TenantProvider is in tenant layout only)
+// 
+// Tenant-specific layouts with context: app/(tenant)/[subdomain]/layout.tsx
+// ============================================================================
 
 export const metadata: Metadata = {
   title: "HostelFlow - Multi-Tenant Hostel Management",

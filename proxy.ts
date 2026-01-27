@@ -6,14 +6,16 @@ import { getToken } from 'next-auth/jwt'
 export async function proxy(request: NextRequest) {
   const pathname = request.nextUrl.pathname
   
-  // CRITICAL BYPASS: Skip ALL static assets and Next.js internals IMMEDIATELY
-  // This prevents ANY interference with build workers and static generation
-  if (pathname.startsWith('/_next')) return NextResponse.next()
-  if (pathname.startsWith('/api')) return NextResponse.next()
-  if (pathname.startsWith('/favicon')) return NextResponse.next()
+  // ULTRA-CRITICAL BYPASS: Skip ALL static assets FIRST (single check for performance)
+  // This prevents ANY interference with build workers, static generation, and error pages
+  if (pathname.includes('.') || pathname.startsWith('/_next')) {
+    return NextResponse.next()
+  }
   
-  // Skip ALL files with extensions (images, fonts, etc.)
-  if (pathname.includes('.')) return NextResponse.next()
+  // Skip API routes and favicon
+  if (pathname.startsWith('/api') || pathname.startsWith('/favicon')) {
+    return NextResponse.next()
+  }
   
   const hostname = request.headers.get('host') || ''
   
