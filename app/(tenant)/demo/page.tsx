@@ -2,6 +2,9 @@
 
 import { useEffect, useState } from "react"
 import { signIn, useSession } from "next-auth/react"
+
+// Force dynamic rendering
+export const dynamic = 'force-dynamic'
 import { useRouter } from "next/navigation"
 import { Loader2, Building2 } from "lucide-react"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"

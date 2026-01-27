@@ -5,6 +5,9 @@ import { TenantProvider } from "@/lib/tenant-context"
 import { SessionProvider } from "@/components/auth/session-provider"
 import { useParams } from "next/navigation"
 
+// Force dynamic rendering for all tenant routes
+export const dynamic = 'force-dynamic'
+
 export default function TenantLayout({
   children,
 }: {

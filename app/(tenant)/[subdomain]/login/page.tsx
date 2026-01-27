@@ -2,6 +2,9 @@
 
 import { useState } from "react"
 import { signIn } from "next-auth/react"
+
+// Force dynamic rendering
+export const dynamic = 'force-dynamic'
 import { useRouter, useParams } from "next/navigation"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
