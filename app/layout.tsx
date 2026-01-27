@@ -34,6 +34,9 @@ export const viewport: Viewport = {
   themeColor: "#1a1a2e",
 }
 
+// ROOT LAYOUT - Landing Page Only
+// This layout does NOT include TenantProvider or any tenant-specific context
+// Tenant-specific layouts are in app/(tenant)/[subdomain]/layout.tsx
 export default function RootLayout({
   children,
 }: Readonly<{

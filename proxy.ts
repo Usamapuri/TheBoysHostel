@@ -4,10 +4,14 @@ import { getToken } from 'next-auth/jwt'
 
 // Renamed from middleware to proxy for Next.js 16 compatibility
 export async function proxy(request: NextRequest) {
-  const hostname = request.headers.get('host') || ''
-  
-  // Get the pathname
   const pathname = request.nextUrl.pathname
+  
+  // CRITICAL: Skip all Next.js internal routes FIRST to prevent build worker interference
+  if (pathname.startsWith('/_next')) {
+    return NextResponse.next()
+  }
+  
+  const hostname = request.headers.get('host') || ''
   
   // Define your root domains (add your production domains here)
   const rootDomains = [
@@ -22,8 +26,8 @@ export async function proxy(request: NextRequest) {
   
   // If it's the root domain, allow access to the landing page
   if (isRootDomain) {
-    // If trying to access a subdomain route from root, redirect to landing
-    if (pathname.startsWith('/_next') || pathname.startsWith('/api')) {
+    // Allow API routes (already handled above but kept for clarity)
+    if (pathname.startsWith('/api')) {
       return NextResponse.next()
     }
     
@@ -69,8 +73,8 @@ export async function proxy(request: NextRequest) {
     return NextResponse.next()
   }
   
-  // Skip rewrite for Next.js internals and API routes
-  if (pathname.startsWith('/_next') || pathname.startsWith('/api')) {
+  // Skip rewrite for API routes (Next.js internals already handled at top)
+  if (pathname.startsWith('/api')) {
     return NextResponse.next()
   }
   
