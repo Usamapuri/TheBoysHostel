@@ -11,8 +11,16 @@ export default function DemoAutoLoginPage() {
   const { data: session, status } = useSession()
   const [loginStatus, setLoginStatus] = useState<"initializing" | "logging-in" | "error">("initializing")
   const [error, setError] = useState("")
+  const [mounted, setMounted] = useState(false)
+
+  // Ensure component is mounted (client-side only)
+  useEffect(() => {
+    setMounted(true)
+  }, [])
 
   useEffect(() => {
+    if (!mounted) return
+
     async function autoLogin() {
       // If already authenticated, redirect to demo dashboard
       if (status === "authenticated") {
@@ -55,7 +63,16 @@ export default function DemoAutoLoginPage() {
     }
 
     autoLogin()
-  }, [status, router])
+  }, [status, router, mounted])
+
+  // Don't render anything until mounted (prevents SSR issues)
+  if (!mounted) {
+    return (
+      <div className="min-h-screen bg-background flex items-center justify-center">
+        <Loader2 className="h-8 w-8 animate-spin text-primary" />
+      </div>
+    )
+  }
 
   if (loginStatus === "error") {
     return (
