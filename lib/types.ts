@@ -3,6 +3,7 @@
 export interface Location {
   id: string
   name: string
+  tenantId?: string // Optional for frontend, handled on server
 }
 
 export interface Room {
