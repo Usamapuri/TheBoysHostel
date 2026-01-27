@@ -3,9 +3,6 @@
 import { useState } from "react"
 import { Header } from "@/components/header"
 import { Navigation } from "@/components/navigation"
-
-// Force dynamic rendering
-export const dynamic = 'force-dynamic'
 import { KPICards } from "@/components/dashboard/kpi-cards"
 import { CollectionStatusCard } from "@/components/dashboard/collection-status-card"
 import { AnalyticsSection } from "@/components/dashboard/analytics-section"

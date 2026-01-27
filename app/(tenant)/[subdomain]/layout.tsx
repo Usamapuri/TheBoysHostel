@@ -1,26 +1,22 @@
-"use client"
-
 import type React from "react"
-import { TenantProvider } from "@/lib/tenant-context"
-import { SessionProvider } from "@/components/auth/session-provider"
-import { useParams } from "next/navigation"
+import { ClientProviders } from "./client-providers"
 
 // Force dynamic rendering for all tenant routes
 export const dynamic = 'force-dynamic'
+export const dynamicParams = true
 
-export default function TenantLayout({
+export default async function TenantLayout({
   children,
+  params,
 }: {
   children: React.ReactNode
+  params: Promise<{ subdomain: string }>
 }) {
-  const params = useParams()
-  const subdomain = params.subdomain as string
+  const { subdomain } = await params
   
   return (
-    <SessionProvider>
-      <TenantProvider subdomain={subdomain}>
-        {children}
-      </TenantProvider>
-    </SessionProvider>
+    <ClientProviders subdomain={subdomain}>
+      {children}
+    </ClientProviders>
   )
 }
