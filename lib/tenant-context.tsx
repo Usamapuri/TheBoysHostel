@@ -2,6 +2,10 @@
 
 import React, { createContext, useContext, useEffect, useState } from 'react'
 
+// ============================================================================
+// SILENT TENANT CONTEXT - Build-Safe, SSR-Safe, Never Throws
+// ============================================================================
+
 export interface Tenant {
   id: string
   name: string
@@ -68,12 +72,25 @@ export function TenantProvider({
   )
 }
 
-export function useTenant() {
-  const context = useContext(TenantContext)
-  
-  // NULL-SAFE: Always return a safe default if no context
-  // NO errors, NO warnings, NO console logs during SSR/build/static generation
-  if (!context) {
+// SILENT HOOK: NEVER throws, NEVER logs, ALWAYS returns safe value
+export function useTenant(): TenantContextType {
+  // Defensive: Try-catch to prevent ANY errors during build/SSR
+  try {
+    const context = useContext(TenantContext)
+    
+    // NULL-SAFE: Return safe default if no context (build/SSR/static generation)
+    if (!context) {
+      return {
+        tenant: null,
+        isLoading: false,
+        error: null,
+        subdomain: '',
+      }
+    }
+    
+    return context
+  } catch (error) {
+    // Silently handle ANY context errors during build
     return {
       tenant: null,
       isLoading: false,
@@ -81,6 +98,4 @@ export function useTenant() {
       subdomain: '',
     }
   }
-  
-  return context
 }

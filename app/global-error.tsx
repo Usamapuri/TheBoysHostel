@@ -1,10 +1,16 @@
 'use client'
 
-// ATOMIC GLOBAL ERROR - NO IMPORTS, NO CONTEXT, NO DEPENDENCIES
-// This file must be completely isolated to allow Next.js to pre-render it during build
+// ============================================================================
+// ATOMIC GLOBAL ERROR - ABSOLUTE ISOLATION
+// ============================================================================
+// NO IMPORTS - NO CONTEXT - NO DEPENDENCIES - NO STATIC GENERATION
+// This file is COMPLETELY isolated from the rest of the application
+// ============================================================================
 
-// Force dynamic rendering to prevent static generation issues
+// Prevent static optimization - force dynamic rendering
 export const dynamic = 'force-dynamic'
+export const runtime = 'nodejs' // Explicit runtime
+export const preferredRegion = 'auto' // No specific region
 
 export default function GlobalError({
   error,
