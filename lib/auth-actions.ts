@@ -3,6 +3,7 @@
 import { prisma } from "@/lib/db"
 import bcrypt from "bcryptjs"
 import { UserRole } from "@prisma/client"
+import { sendNewRegistrationNotification } from "./email"
 
 export interface RegisterHostelInput {
   hostelName: string
@@ -50,15 +51,20 @@ export async function registerHostel(
       }
     }
 
-    // Check if subdomain is available
-    const existingTenant = await prisma.tenant.findUnique({
-      where: { subdomain: data.subdomain.toLowerCase() },
-    })
+    // Check if subdomain is available (check both tenants and pending requests)
+    const [existingTenant, existingRequest] = await Promise.all([
+      prisma.tenant.findUnique({
+        where: { subdomain: data.subdomain.toLowerCase() },
+      }),
+      prisma.tenantRegistrationRequest.findUnique({
+        where: { subdomain: data.subdomain.toLowerCase() },
+      }),
+    ])
 
-    if (existingTenant) {
+    if (existingTenant || existingRequest) {
       return {
         success: false,
-        error: "This subdomain is already taken",
+        error: "This subdomain is already taken or has a pending request",
       }
     }
 
@@ -82,37 +88,40 @@ export async function registerHostel(
       }
     }
 
-    // Hash password
+    // Hash password (ready to use when approved)
     const hashedPassword = await bcrypt.hash(data.password, 12)
 
-    // Create tenant and admin user in a transaction
-    const result = await prisma.$transaction(async (tx) => {
-      // Create tenant
-      const tenant = await tx.tenant.create({
-        data: {
-          name: data.hostelName,
-          subdomain: data.subdomain.toLowerCase(),
-          isActive: true,
-        },
-      })
-
-      // Create admin user
-      const user = await tx.user.create({
-        data: {
-          name: data.adminName,
-          email: data.adminEmail.toLowerCase(),
-          password: hashedPassword,
-          role: UserRole.ADMIN,
-          tenantId: tenant.id,
-        },
-      })
-
-      return { tenant, user }
+    // Create registration request (pending super admin approval)
+    const request = await prisma.tenantRegistrationRequest.create({
+      data: {
+        hostelName: data.hostelName,
+        subdomain: data.subdomain.toLowerCase(),
+        adminEmail: data.adminEmail.toLowerCase(),
+        adminName: data.adminName,
+        password: hashedPassword,
+        status: 'PENDING',
+      },
     })
+
+    // Send email notification to super admin about new registration request
+    const superAdmins = await prisma.user.findMany({
+      where: { role: UserRole.SUPERADMIN },
+      select: { email: true },
+    })
+    
+    for (const admin of superAdmins) {
+      await sendNewRegistrationNotification(
+        admin.email,
+        data.hostelName,
+        data.subdomain,
+        data.adminName,
+        data.adminEmail
+      )
+    }
 
     return {
       success: true,
-      subdomain: result.tenant.subdomain,
+      subdomain: request.subdomain,
     }
   } catch (error) {
     console.error("Error registering hostel:", error)
@@ -127,10 +136,15 @@ export async function checkSubdomainAvailability(
   subdomain: string
 ): Promise<boolean> {
   try {
-    const tenant = await prisma.tenant.findUnique({
-      where: { subdomain: subdomain.toLowerCase() },
-    })
-    return !tenant
+    const [tenant, request] = await Promise.all([
+      prisma.tenant.findUnique({
+        where: { subdomain: subdomain.toLowerCase() },
+      }),
+      prisma.tenantRegistrationRequest.findUnique({
+        where: { subdomain: subdomain.toLowerCase() },
+      }),
+    ])
+    return !tenant && !request
   } catch (error) {
     console.error("Error checking subdomain:", error)
     return false

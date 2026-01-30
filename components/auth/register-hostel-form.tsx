@@ -65,11 +65,17 @@ export function RegisterHostelForm() {
       })
 
       if (result.success && result.subdomain) {
-        // Registration successful
-        alert(`Success! Your hostel is ready at: ${result.subdomain}.localhost:3000`)
+        // Registration request successful - pending approval
+        alert(
+          `🎉 Thank you for registering!\n\n` +
+          `Your registration request has been submitted successfully.\n\n` +
+          `📧 You will receive an email at ${formData.adminEmail} once a super admin reviews and approves your request.\n\n` +
+          `⏳ This usually takes 24-48 hours.\n\n` +
+          `Subdomain reserved: ${result.subdomain}.yourdomain.com`
+        )
         
-        // Redirect to the new subdomain's login page
-        window.location.href = `http://${result.subdomain}.localhost:3000/login`
+        // Redirect to home page
+        router.push('/')
       } else {
         setError(result.error || "Registration failed")
       }

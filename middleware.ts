@@ -12,8 +12,8 @@ export async function middleware(request: NextRequest) {
     return NextResponse.next()
   }
   
-  // Skip API routes and favicon
-  if (pathname.startsWith('/api') || pathname.startsWith('/favicon')) {
+  // Skip API routes, favicon, and super admin routes
+  if (pathname.startsWith('/api') || pathname.startsWith('/favicon') || pathname.startsWith('/superadmin')) {
     return NextResponse.next()
   }
   

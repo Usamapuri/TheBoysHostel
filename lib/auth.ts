@@ -64,6 +64,12 @@ export const authOptions: NextAuthOptions = {
             }
           }
           // Superadmins can log in to any subdomain
+        } else {
+          // No subdomain provided (logging in from root domain)
+          // Only super admins can login from root domain
+          if (user.role !== UserRole.SUPERADMIN) {
+            throw new Error("Only super admins can login from the main domain")
+          }
         }
 
         // Return user data for session

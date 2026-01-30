@@ -20,6 +20,13 @@ model Tenant {
   subdomain String   @unique
   isActive  Boolean  @default(true)
   createdAt DateTime @default(now())
+  
+  // Super admin approval tracking
+  approvedAt       DateTime?
+  approvedBy       String?
+  suspendedAt      DateTime?
+  suspendedBy      String?
+  suspensionReason String?
 
   // Relations
   users            User[]
@@ -59,6 +66,9 @@ model User {
   image         String?
   accounts      Account[]
   sessions      Session[]
+  
+  // Super admin relations
+  reviewedRequests TenantRegistrationRequest[]
 }
 
 // NextAuth.js Models
@@ -95,6 +105,37 @@ model VerificationToken {
   expires    DateTime
 
   @@unique([identifier, token])
+}
+
+// ============================================
+// TENANT REGISTRATION REQUEST MODEL
+// ============================================
+
+model TenantRegistrationRequest {
+  id              String             @id @default(cuid())
+  hostelName      String
+  subdomain       String             @unique
+  adminEmail      String
+  adminName       String
+  password        String             // Hashed password, ready to use when approved
+  
+  status          RegistrationStatus @default(PENDING)
+  rejectionReason String?
+  
+  requestedAt     DateTime           @default(now())
+  reviewedAt      DateTime?
+  reviewedBy      String?            // Super admin user ID
+  reviewedByUser  User?              @relation(fields: [reviewedBy], references: [id])
+  
+  // Contact/business info (optional for now, can expand later)
+  phoneNumber     String?
+  address         String?
+}
+
+enum RegistrationStatus {
+  PENDING
+  APPROVED
+  REJECTED
 }
 
 // ============================================

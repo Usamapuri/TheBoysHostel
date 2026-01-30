@@ -14,9 +14,14 @@ export default function LandingPage() {
             <Building2 className="h-8 w-8 text-primary" />
             <span className="text-xl font-bold text-foreground">HostelOS</span>
           </div>
-          <Link href="/demo">
-            <Button>Try Demo</Button>
-          </Link>
+          <div className="flex items-center gap-3">
+            <Link href="/superadmin/login">
+              <Button variant="ghost" size="sm">Super Admin</Button>
+            </Link>
+            <Link href="/demo">
+              <Button>Try Demo</Button>
+            </Link>
+          </div>
         </div>
       </header>
 
