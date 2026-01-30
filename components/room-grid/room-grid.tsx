@@ -25,6 +25,7 @@ interface RoomGridProps {
     floor: number
     capacity: number
     type: "AC" | "Non-AC"
+    baseMonthlyRent: number
     locationId: string
   }) => void
   onEditRoom: (roomId: string, updates: { type: "AC" | "Non-AC"; capacity: number }) => void
@@ -33,7 +34,7 @@ interface RoomGridProps {
   onAssignStudent: (studentId: string, bedId: string, roomId: string) => void
   onAddLocation: (name: string) => void
   onUpdateLocation: (locationId: string, name: string) => void
-  onDeleteLocation: (locationId: string) => { success: boolean; error?: string }
+  onDeleteLocation: (locationId: string) => Promise<{ success: boolean; error?: string }>
 }
 
 export function RoomGrid({

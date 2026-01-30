@@ -289,7 +289,7 @@ function mapMaintenanceStatusToDb(status: "Reported" | "In Progress" | "Awaiting
 // ============================================
 
 export async function getData(): Promise<HostelData> {
-    const tenantId = getCurrentTenantId()
+    const tenantId = await getCurrentTenantId()
     
     const [locations, rooms, students, transactions, expenses, activityLogs, maintenanceTasks] = await Promise.all([
         prisma.location.findMany({
@@ -418,7 +418,7 @@ export async function getData(): Promise<HostelData> {
 // ============================================
 
 export async function addLocation(name: string): Promise<Location> {
-    const tenantId = getCurrentTenantId()
+    const tenantId = await getCurrentTenantId()
     
     const location = await prisma.location.create({
         data: { 
@@ -431,7 +431,7 @@ export async function addLocation(name: string): Promise<Location> {
 }
 
 export async function updateLocation(locationId: string, name: string): Promise<void> {
-    const tenantId = getCurrentTenantId()
+    const tenantId = await getCurrentTenantId()
     
     await prisma.location.update({
         where: { 
@@ -444,7 +444,7 @@ export async function updateLocation(locationId: string, name: string): Promise<
 }
 
 export async function deleteLocation(locationId: string): Promise<{ success: boolean; error?: string }> {
-    const tenantId = getCurrentTenantId()
+    const tenantId = await getCurrentTenantId()
     
     const roomsInLocation = await prisma.room.count({
         where: { 
@@ -482,7 +482,7 @@ export async function addRoom(roomData: {
     baseMonthlyRent: number
     locationId: string
 }): Promise<void> {
-    const tenantId = getCurrentTenantId()
+    const tenantId = await getCurrentTenantId()
     
     const bedsData = Array.from({ length: roomData.capacity }, (_, idx) => ({
         label: String.fromCharCode(65 + idx),
@@ -510,7 +510,7 @@ export async function updateRoom(
     roomId: string,
     updates: Partial<{ roomNumber: string; floor: number; capacity: number; type: "AC" | "Non-AC"; baseMonthlyRent: number; locationId: string }>
 ): Promise<void> {
-    const tenantId = getCurrentTenantId()
+    const tenantId = await getCurrentTenantId()
     
     const room = await prisma.room.findUnique({
         where: { 
@@ -564,7 +564,7 @@ export async function updateRoom(
 }
 
 export async function deleteRoom(roomId: string): Promise<{ success: boolean; error?: string }> {
-    const tenantId = getCurrentTenantId()
+    const tenantId = await getCurrentTenantId()
     
     const room = await prisma.room.findUnique({
         where: { 
@@ -606,7 +606,7 @@ export async function addStudent(studentData: {
     emergencyContact?: { name: string; phone: string; relation: string }
     address?: string
 }): Promise<void> {
-    const tenantId = getCurrentTenantId()
+    const tenantId = await getCurrentTenantId()
     
     // Get room to fetch baseMonthlyRent if roomId is provided
     const room = studentData.roomId ? await prisma.room.findUnique({
@@ -664,7 +664,7 @@ export async function addStudent(studentData: {
 }
 
 export async function updateStudent(studentId: string, updates: Partial<Student>): Promise<void> {
-    const tenantId = getCurrentTenantId()
+    const tenantId = await getCurrentTenantId()
     
     const updateData: Record<string, unknown> = {}
 
@@ -689,7 +689,7 @@ export async function updateStudent(studentId: string, updates: Partial<Student>
 }
 
 export async function deleteStudent(studentId: string): Promise<void> {
-    const tenantId = getCurrentTenantId()
+    const tenantId = await getCurrentTenantId()
     
     const student = await prisma.student.findUnique({
         where: { 
@@ -718,7 +718,7 @@ export async function deleteStudent(studentId: string): Promise<void> {
 }
 
 export async function assignStudentToBed(studentId: string, bedId: string, roomId: string): Promise<void> {
-    const tenantId = getCurrentTenantId()
+    const tenantId = await getCurrentTenantId()
     
     // Get room to fetch baseMonthlyRent
     const room = await prisma.room.findUnique({
@@ -760,7 +760,7 @@ export async function assignStudentToBed(studentId: string, bedId: string, roomI
 }
 
 export async function transferStudent(studentId: string, newBedId: string, newRoomId: string): Promise<void> {
-    const tenantId = getCurrentTenantId()
+    const tenantId = await getCurrentTenantId()
     
     const student = await prisma.student.findUnique({
         where: { 
@@ -803,7 +803,7 @@ export async function checkInStudent(
     studentName: string,
     studentPhone: string
 ): Promise<void> {
-    const tenantId = getCurrentTenantId()
+    const tenantId = await getCurrentTenantId()
     
     // Get room to fetch baseMonthlyRent
     const room = await prisma.room.findUnique({
@@ -854,7 +854,7 @@ export async function checkInStudent(
 // ============================================
 
 export async function generateMonthlyBills(): Promise<void> {
-    const tenantId = getCurrentTenantId()
+    const tenantId = await getCurrentTenantId()
     const now = new Date()
     const currentMonth = now.toLocaleDateString("en-US", { month: "long", year: "numeric" })
     
@@ -900,7 +900,7 @@ export async function generateMonthlyBills(): Promise<void> {
 }
 
 export async function markAsPaid(transactionId: string): Promise<void> {
-    const tenantId = getCurrentTenantId()
+    const tenantId = await getCurrentTenantId()
     
     await prisma.transaction.update({
         where: { 
@@ -918,7 +918,7 @@ export async function addOneOffCharge(
     amount: number,
     description: string
 ): Promise<void> {
-    const tenantId = getCurrentTenantId()
+    const tenantId = await getCurrentTenantId()
     const now = new Date()
     const dueDate = new Date(now)
     dueDate.setDate(dueDate.getDate() + 3) // Due in 3 days
@@ -940,7 +940,7 @@ export async function addOneOffCharge(
 }
 
 export async function updateRentAmount(transactionId: string, newAmount: number): Promise<void> {
-    const tenantId = getCurrentTenantId()
+    const tenantId = await getCurrentTenantId()
     
     await prisma.transaction.update({
         where: { 
@@ -965,7 +965,7 @@ export async function addExpense(expenseData: {
     vendorName?: string
     receiptUrl?: string
 }): Promise<void> {
-    const tenantId = getCurrentTenantId()
+    const tenantId = await getCurrentTenantId()
     
     await prisma.expense.create({
         data: {
@@ -983,7 +983,7 @@ export async function addExpense(expenseData: {
 }
 
 export async function deleteExpense(expenseId: string): Promise<void> {
-    const tenantId = getCurrentTenantId()
+    const tenantId = await getCurrentTenantId()
     
     await prisma.expense.delete({
         where: { 
@@ -999,7 +999,7 @@ export async function deleteExpense(expenseId: string): Promise<void> {
 // ============================================
 
 export async function addActivityLog(log: Omit<ActivityLog, "id">): Promise<void> {
-    const tenantId = getCurrentTenantId()
+    const tenantId = await getCurrentTenantId()
     
     await prisma.activityLog.create({
         data: {
@@ -1026,7 +1026,7 @@ export async function addMaintenanceTask(taskData: {
     category: "Plumbing" | "Electrical" | "Furniture" | "Internet" | "Other"
     priority: "Low" | "Medium" | "High"
 }): Promise<void> {
-    const tenantId = getCurrentTenantId()
+    const tenantId = await getCurrentTenantId()
     
     await prisma.maintenanceTask.create({
         data: {
@@ -1047,7 +1047,7 @@ export async function updateMaintenanceTask(
     taskId: string,
     updates: Partial<Omit<MaintenanceTask, "id" | "roomNumber">>
 ): Promise<void> {
-    const tenantId = getCurrentTenantId()
+    const tenantId = await getCurrentTenantId()
     
     const updateData: Record<string, unknown> = {}
 
@@ -1070,7 +1070,7 @@ export async function updateMaintenanceTask(
 }
 
 export async function deleteMaintenanceTask(taskId: string): Promise<void> {
-    const tenantId = getCurrentTenantId()
+    const tenantId = await getCurrentTenantId()
     
     await prisma.maintenanceTask.delete({
         where: { 
@@ -1082,7 +1082,7 @@ export async function deleteMaintenanceTask(taskId: string): Promise<void> {
 }
 
 export async function completeMaintenanceTask(taskId: string, cost?: number): Promise<void> {
-    const tenantId = getCurrentTenantId()
+    const tenantId = await getCurrentTenantId()
     
     const task = await prisma.maintenanceTask.findUnique({
         where: { 
@@ -1128,7 +1128,7 @@ export async function completeMaintenanceTask(taskId: string, cost?: number): Pr
 // ============================================
 
 export async function calculateKPIs(selectedMonth?: string) {
-    const tenantId = getCurrentTenantId()
+    const tenantId = await getCurrentTenantId()
     const filterMonth = selectedMonth || new Date().toLocaleDateString("en-US", { month: "long", year: "numeric" })
 
     const [rooms, transactions, expenses, maintenanceTasks] = await Promise.all([
@@ -1207,7 +1207,7 @@ export async function calculateKPIs(selectedMonth?: string) {
 // ============================================
 
 export async function getStudentById(studentId: string): Promise<Student | null> {
-    const tenantId = getCurrentTenantId()
+    const tenantId = await getCurrentTenantId()
     
     const student = await prisma.student.findUnique({
         where: { 
@@ -1243,7 +1243,7 @@ export async function getStudentById(studentId: string): Promise<Student | null>
 }
 
 export async function getStudentTransactions(studentId: string): Promise<Transaction[]> {
-    const tenantId = getCurrentTenantId()
+    const tenantId = await getCurrentTenantId()
     
     const transactions = await prisma.transaction.findMany({
         where: { 
@@ -1267,7 +1267,7 @@ export async function getStudentTransactions(studentId: string): Promise<Transac
 }
 
 export async function getStudentActivityLogs(studentId: string): Promise<ActivityLog[]> {
-    const tenantId = getCurrentTenantId()
+    const tenantId = await getCurrentTenantId()
     
     const activityLogs = await prisma.activityLog.findMany({
         where: { 
@@ -1288,7 +1288,7 @@ export async function getStudentActivityLogs(studentId: string): Promise<Activit
 }
 
 export async function getRoomById(roomId: string): Promise<Room | null> {
-    const tenantId = getCurrentTenantId()
+    const tenantId = await getCurrentTenantId()
     
     const room = await prisma.room.findUnique({
         where: { 

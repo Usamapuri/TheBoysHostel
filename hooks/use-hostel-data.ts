@@ -162,6 +162,7 @@ export function useHostelData() {
       floor: number
       capacity: number
       type: "AC" | "Non-AC"
+      baseMonthlyRent: number
       locationId: string
     }) => {
       startTransition(async () => {
@@ -184,7 +185,7 @@ export function useHostelData() {
 
   const handleDeleteRoom = useCallback(
     async (roomId: string) => {
-      let result = { success: false, error: "Unknown error" }
+      let result: { success: boolean; error?: string } = { success: false, error: "Unknown error" }
       await new Promise<void>((resolve) => {
         startTransition(async () => {
           result = await deleteRoomAction(roomId)
@@ -324,7 +325,7 @@ export function useHostelData() {
 
   const handleDeleteLocation = useCallback(
     async (locationId: string): Promise<{ success: boolean; error?: string }> => {
-      let result = { success: false, error: "Unknown error" }
+      let result: { success: boolean; error?: string } = { success: false, error: "Unknown error" }
       await new Promise<void>((resolve) => {
         startTransition(async () => {
           result = await deleteLocationAction(locationId)

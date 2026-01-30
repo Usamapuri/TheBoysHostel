@@ -391,6 +391,7 @@ export const addRoom = (
     floor: number
     capacity: number
     type: "AC" | "Non-AC"
+    baseMonthlyRent: number
     locationId: string
   },
 ): HostelData => {
@@ -401,6 +402,7 @@ export const addRoom = (
     floor: roomData.floor,
     capacity: roomData.capacity,
     type: roomData.type,
+    baseMonthlyRent: roomData.baseMonthlyRent,
     locationId: roomData.locationId,
     beds: Array.from({ length: roomData.capacity }, (_, idx) => ({
       id: `bed-${roomData.roomNumber}-${String.fromCharCode(65 + idx)}`,

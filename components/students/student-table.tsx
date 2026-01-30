@@ -22,8 +22,8 @@ interface StudentTableProps {
     name: string
     phone: string
     email?: string
-    roomId: string
-    bedId: string
+    roomId?: string
+    bedId?: string
     checkInDate: string
   }) => void
   onUpdateStudent: (studentId: string, updates: Partial<Student>) => void

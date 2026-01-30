@@ -19,7 +19,7 @@ interface ManageLocationsDialogProps {
     onOpenChange: (open: boolean) => void
     locations: Location[]
     onUpdateLocation: (locationId: string, name: string) => void
-    onDeleteLocation: (locationId: string) => { success: boolean; error?: string }
+    onDeleteLocation: (locationId: string) => Promise<{ success: boolean; error?: string }>
 }
 
 export function ManageLocationsDialog({
@@ -52,9 +52,9 @@ export function ManageLocationsDialog({
         setEditValue("")
     }
 
-    const handleDelete = (locationId: string) => {
+    const handleDelete = async (locationId: string) => {
         setError(null)
-        const result = onDeleteLocation(locationId)
+        const result = await onDeleteLocation(locationId)
         if (!result.success && result.error) {
             setError(result.error)
         }

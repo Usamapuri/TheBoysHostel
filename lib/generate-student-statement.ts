@@ -17,9 +17,9 @@ export function generateStudentStatement(
   
   // Student Information
   doc.setFontSize(12)
-  doc.setFont(undefined, "bold")
+  doc.setFont("helvetica", "bold")
   doc.text("Student Details", 14, 45)
-  doc.setFont(undefined, "normal")
+  doc.setFont("helvetica", "normal")
   doc.setFontSize(10)
   
   doc.text(`Name: ${student.name}`, 20, 53)
@@ -45,9 +45,9 @@ export function generateStudentStatement(
   const summaryY = roomNumber ? (student.email ? 88 : 81) : (student.email ? 81 : 74)
   
   doc.setFontSize(12)
-  doc.setFont(undefined, "bold")
+  doc.setFont("helvetica", "bold")
   doc.text("Account Summary", 14, summaryY)
-  doc.setFont(undefined, "normal")
+  doc.setFont("helvetica", "normal")
   doc.setFontSize(10)
   
   doc.text(`Total Charges: $${totalAmount.toFixed(2)}`, 20, summaryY + 8)
@@ -66,7 +66,7 @@ export function generateStudentStatement(
   
   // Transaction History
   doc.setFontSize(12)
-  doc.setFont(undefined, "bold")
+  doc.setFont("helvetica", "bold")
   doc.text("Transaction History", 14, summaryY + 36)
   
   const sortedTransactions = [...transactions].sort(

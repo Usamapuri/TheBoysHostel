@@ -96,10 +96,10 @@ export const authOptions: NextAuthOptions = {
     },
     async session({ session, token }) {
       if (session.user) {
-        (session.user as any).id = token.id
-        (session.user as any).role = token.role
-        (session.user as any).tenantId = token.tenantId
-        (session.user as any).subdomain = token.subdomain
+        session.user.id = token.id as string
+        session.user.role = token.role as UserRole
+        session.user.tenantId = token.tenantId as string | null
+        session.user.subdomain = token.subdomain as string | undefined
       }
       return session
     },

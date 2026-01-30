@@ -2,8 +2,8 @@ import { NextResponse } from 'next/server'
 import type { NextRequest } from 'next/server'
 import { getToken } from 'next-auth/jwt'
 
-// Renamed from middleware to proxy for Next.js 16 compatibility
-export async function proxy(request: NextRequest) {
+// Next.js middleware for subdomain-based multi-tenant routing
+export async function middleware(request: NextRequest) {
   const pathname = request.nextUrl.pathname
   
   // ULTRA-CRITICAL BYPASS: Skip ALL static assets FIRST (single check for performance)

@@ -24,6 +24,7 @@ const generateRooms = (): Room[] => {
         floor,
         capacity,
         type: floor === 3 ? "AC" : "Non-AC",
+        baseMonthlyRent: floor === 3 ? 8000 : 6000,
         locationId: locationIds[locationIndex],
         beds: Array.from({ length: capacity }, (_, idx) => ({
           id: `bed-${roomNumber}-${String.fromCharCode(65 + idx)}`,

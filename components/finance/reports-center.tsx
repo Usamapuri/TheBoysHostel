@@ -44,9 +44,9 @@ export function ReportsCenter({ transactions, expenses, allMonths }: ReportsCent
     doc.setFontSize(11)
     doc.text(`Total Revenue: $${totalRevenue.toFixed(2)}`, 20, 60)
     doc.text(`Total Expenses: $${totalExpenses.toFixed(2)}`, 20, 68)
-    doc.setFont(undefined, "bold")
+    doc.setFont("helvetica", "bold")
     doc.text(`Net Profit: $${netProfit.toFixed(2)}`, 20, 76)
-    doc.setFont(undefined, "normal")
+    doc.setFont("helvetica", "normal")
     
     // Top 5 Expenses
     const sortedExpenses = [...monthExpenses].sort((a, b) => b.amount - a.amount).slice(0, 5)

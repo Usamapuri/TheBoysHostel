@@ -49,49 +49,49 @@ async function main() {
 
     // Update Locations
     const locationsUpdated = await prisma.location.updateMany({
-      where: { tenantId: null },
+      where: { tenantId: "" as any },
       data: { tenantId: TENANT_ID },
     })
     console.log(`✅ Updated ${locationsUpdated.count} locations`)
 
     // Update Rooms
     const roomsUpdated = await prisma.room.updateMany({
-      where: { tenantId: null },
+      where: { tenantId: "" as any },
       data: { tenantId: TENANT_ID },
     })
     console.log(`✅ Updated ${roomsUpdated.count} rooms`)
 
     // Update Students
     const studentsUpdated = await prisma.student.updateMany({
-      where: { tenantId: null },
+      where: { tenantId: "" as any },
       data: { tenantId: TENANT_ID },
     })
     console.log(`✅ Updated ${studentsUpdated.count} students`)
 
     // Update Transactions
     const transactionsUpdated = await prisma.transaction.updateMany({
-      where: { tenantId: null },
+      where: { tenantId: "" as any },
       data: { tenantId: TENANT_ID },
     })
     console.log(`✅ Updated ${transactionsUpdated.count} transactions`)
 
     // Update Expenses
     const expensesUpdated = await prisma.expense.updateMany({
-      where: { tenantId: null },
+      where: { tenantId: "" as any },
       data: { tenantId: TENANT_ID },
     })
     console.log(`✅ Updated ${expensesUpdated.count} expenses`)
 
     // Update Activity Logs
     const activityLogsUpdated = await prisma.activityLog.updateMany({
-      where: { tenantId: null },
+      where: { tenantId: "" as any },
       data: { tenantId: TENANT_ID },
     })
     console.log(`✅ Updated ${activityLogsUpdated.count} activity logs`)
 
     // Update Maintenance Tasks
     const maintenanceTasksUpdated = await prisma.maintenanceTask.updateMany({
-      where: { tenantId: null },
+      where: { tenantId: "" as any },
       data: { tenantId: TENANT_ID },
     })
     console.log(`✅ Updated ${maintenanceTasksUpdated.count} maintenance tasks`)

@@ -8,7 +8,7 @@ interface KanbanColumnProps {
   status: "Reported" | "In Progress" | "Awaiting Parts" | "Completed"
   tasks: MaintenanceTask[]
   onTaskClick: (task: MaintenanceTask) => void
-  onMoveTask: (taskId: string, newStatus: typeof status) => void
+  onMoveTask: (taskId: string, newStatus: MaintenanceTask["status"]) => void
   onDeleteTask: (taskId: string) => void
 }
 

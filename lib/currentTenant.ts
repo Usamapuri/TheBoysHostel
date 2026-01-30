@@ -19,7 +19,7 @@ export const FALLBACK_TENANT_ID = "the-boys-hostel-tenant-id"
 export const getCurrentTenantId = cache(async (): Promise<string> => {
   try {
     // Try to get subdomain from headers (set by middleware)
-    const headersList = headers()
+    const headersList = await headers()
     const subdomain = headersList.get('x-subdomain')
     
     if (!subdomain) {

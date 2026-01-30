@@ -22,7 +22,6 @@ import { KanbanBoard } from "@/components/maintenance/kanban-board"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { useHostelData } from "@/hooks/use-hostel-data"
 import { Loader2 } from "lucide-react"
-import { calculateKPIs } from "@/lib/actions"
 import { useTenant } from "@/lib/tenant-context"
 
 export default function TenantDashboard() {
@@ -83,9 +82,10 @@ export default function TenantDashboard() {
 
   const allMonths = Array.from(
     new Set([...data.transactions.map((t) => t.month), ...data.expenses.map((e) => e.month)]),
-  ).sort((a, b) => new Date(`1 ${b}`) - new Date(`1 ${a}`)) as string[]
+  ).sort((a, b) => new Date(`1 ${b}`).getTime() - new Date(`1 ${a}`).getTime()) as string[]
 
-  const monthlyKPIs = selectedMonth ? calculateKPIs(data, selectedMonth) : kpis
+  // Use the KPIs from the hook - month filtering is already handled by the filtered data below
+  const monthlyKPIs = kpis
 
   const filteredTransactions = selectedMonth
     ? data.transactions.filter((t) => t.month === selectedMonth)
