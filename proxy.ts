@@ -40,7 +40,9 @@ export async function proxy(request: NextRequest) {
     
     // Allow demo route (auto-login handled in page)
     if (pathname.startsWith('/demo')) {
-      return NextResponse.next()
+      const response = NextResponse.next()
+      response.headers.set('x-subdomain', 'demo')
+      return response
     }
     
     // Allow super admin routes
@@ -68,7 +70,10 @@ export async function proxy(request: NextRequest) {
         return NextResponse.redirect(new URL(`/${tenantSlug}`, request.url))
       }
       
-      return NextResponse.next()
+      // Set x-subdomain header for server actions
+      const response = NextResponse.next()
+      response.headers.set('x-subdomain', tenantSlug)
+      return response
     }
     
     // For any other route, redirect to landing

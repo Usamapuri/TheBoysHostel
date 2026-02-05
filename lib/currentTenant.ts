@@ -9,9 +9,6 @@ import { headers } from 'next/headers'
 import { cache } from 'react'
 import { prisma } from './db'
 
-// Fallback tenant ID for development/testing
-export const FALLBACK_TENANT_ID = "the-boys-hostel-tenant-id"
-
 /**
  * Gets the current tenant ID from subdomain
  * This function is server-side only and uses Next.js headers
@@ -23,31 +20,23 @@ export const getCurrentTenantId = cache(async (): Promise<string> => {
     const subdomain = headersList.get('x-subdomain')
     
     if (!subdomain) {
-      // No subdomain, return fallback
-      return FALLBACK_TENANT_ID
+      throw new Error('No subdomain header found - tenant cannot be determined')
     }
 
-    // Special handling for demo subdomain
-    if (subdomain === 'demo') {
-      // Return a demo tenant ID or the fallback
-      return FALLBACK_TENANT_ID
-    }
-
-    // Fetch tenant by subdomain
+    // Fetch tenant by subdomain (works for demo, theboyshostel, or any tenant)
     const tenant = await prisma.tenant.findUnique({
       where: { subdomain },
       select: { id: true },
     })
 
     if (!tenant) {
-      console.warn(`Tenant not found for subdomain: ${subdomain}, using fallback`)
-      return FALLBACK_TENANT_ID
+      throw new Error(`Tenant not found for subdomain: ${subdomain}`)
     }
 
     return tenant.id
   } catch (error) {
     console.error('Error resolving tenant ID:', error)
-    return FALLBACK_TENANT_ID
+    throw error
   }
 })
 
@@ -56,5 +45,8 @@ export const getCurrentTenantId = cache(async (): Promise<string> => {
  * This should be used with TenantContext
  */
 export function getTenantIdFromContext(tenantId?: string): string {
-  return tenantId || FALLBACK_TENANT_ID
+  if (!tenantId) {
+    throw new Error('Tenant ID is required but not provided in context')
+  }
+  return tenantId
 }
