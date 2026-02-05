@@ -31,14 +31,23 @@ export async function proxy(request: NextRequest) {
   // Check if it's a root domain
   const isRootDomain = rootDomains.some(domain => hostname === domain || hostname.startsWith(domain))
   
-  // If it's the root domain, allow access to the landing page
+  // If it's the root domain, allow access to specific paths
   if (isRootDomain) {
-    // If pathname is just /, show landing page
+    // Allow landing page
     if (pathname === '/') {
       return NextResponse.next()
     }
     
-    // For any other route from root domain, redirect to landing
+    // Allow path-based tenant routes (e.g., /demo, /theboyshostel)
+    // Allow super admin routes
+    // These will be handled by Next.js routing
+    if (pathname.startsWith('/demo') || 
+        pathname.startsWith('/superadmin') ||
+        pathname.match(/^\/[a-zA-Z0-9-]+($|\/)/)) {
+      return NextResponse.next()
+    }
+    
+    // For any other route, redirect to landing
     return NextResponse.redirect(new URL('/', request.url))
   }
   
