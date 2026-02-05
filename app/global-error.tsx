@@ -3,14 +3,10 @@
 // ============================================================================
 // ATOMIC GLOBAL ERROR - ABSOLUTE ISOLATION
 // ============================================================================
-// NO IMPORTS - NO CONTEXT - NO DEPENDENCIES - NO STATIC GENERATION
+// NO IMPORTS - NO CONTEXT - NO DEPENDENCIES
 // This file is COMPLETELY isolated from the rest of the application
+// Must be a pure client component with NO route segment config exports
 // ============================================================================
-
-// Prevent static optimization - force dynamic rendering
-export const dynamic = 'force-dynamic'
-export const runtime = 'nodejs' // Explicit runtime
-export const preferredRegion = 'auto' // No specific region
 
 export default function GlobalError({
   error,
