@@ -23,6 +23,7 @@ export async function proxy(request: NextRequest) {
   const rootDomains = [
     'localhost:3000',
     'localhost',
+    'hostelflow.up.railway.app',
     'yourdomain.com',
     'www.yourdomain.com',
   ]
