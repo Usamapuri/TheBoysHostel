@@ -38,12 +38,36 @@ export async function proxy(request: NextRequest) {
       return NextResponse.next()
     }
     
-    // Allow path-based tenant routes (e.g., /demo, /theboyshostel)
+    // Allow demo route (auto-login handled in page)
+    if (pathname.startsWith('/demo')) {
+      return NextResponse.next()
+    }
+    
     // Allow super admin routes
-    // These will be handled by Next.js routing
-    if (pathname.startsWith('/demo') || 
-        pathname.startsWith('/superadmin') ||
-        pathname.match(/^\/[a-zA-Z0-9-]+($|\/)/)) {
+    if (pathname.startsWith('/superadmin')) {
+      return NextResponse.next()
+    }
+    
+    // Path-based tenant routes (e.g., /theboyshostel)
+    // Check authentication for protected tenant routes
+    const tenantPathMatch = pathname.match(/^\/([a-zA-Z0-9-]+)(\/|$)/)
+    if (tenantPathMatch) {
+      const tenantSlug = tenantPathMatch[1]
+      const token = await getToken({ req: request, secret: process.env.NEXTAUTH_SECRET })
+      
+      // Allow login and register pages for tenant routes
+      const isLoginOrRegister = pathname.endsWith('/login') || pathname.endsWith('/register')
+      
+      if (!token && !isLoginOrRegister) {
+        // Redirect to tenant login page
+        return NextResponse.redirect(new URL(`/${tenantSlug}/login`, request.url))
+      }
+      
+      // If authenticated and trying to access login, redirect to dashboard
+      if (token && isLoginOrRegister) {
+        return NextResponse.redirect(new URL(`/${tenantSlug}`, request.url))
+      }
+      
       return NextResponse.next()
     }
     
