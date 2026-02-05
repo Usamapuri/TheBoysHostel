@@ -5,6 +5,13 @@ import { signIn, useSession } from "next-auth/react"
 import { useRouter } from "next/navigation"
 import { Loader2, Building2 } from "lucide-react"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
+import dynamic from "next/dynamic"
+
+// Import the tenant dashboard dynamically to avoid SSR issues
+const TenantDashboard = dynamic(
+  () => import("@/app/(tenant)/[subdomain]/page").then((mod) => mod.default),
+  { ssr: false }
+)
 
 export default function DemoAutoLoginPage() {
   const router = useRouter()
@@ -22,9 +29,9 @@ export default function DemoAutoLoginPage() {
     if (!mounted) return
 
     async function autoLogin() {
-      // If already authenticated, redirect to demo dashboard
+      // If already authenticated, show the dashboard (no redirect needed)
       if (status === "authenticated") {
-        router.push("/demo")
+        // Dashboard will be rendered below
         return
       }
 
@@ -53,8 +60,7 @@ export default function DemoAutoLoginPage() {
             "Demo login failed. The demo account may not be set up yet. Please contact support or try registering a new hostel."
           )
         } else {
-          // Login successful, redirect to demo dashboard
-          router.push("/demo")
+          // Login successful, refresh to show dashboard
           router.refresh()
         }
       } catch (err) {
@@ -75,6 +81,12 @@ export default function DemoAutoLoginPage() {
     )
   }
 
+  // If authenticated, show the dashboard
+  if (status === "authenticated") {
+    return <TenantDashboard />
+  }
+
+  // If login error occurred
   if (loginStatus === "error") {
     return (
       <div className="min-h-screen bg-background flex items-center justify-center p-4">
@@ -112,6 +124,7 @@ export default function DemoAutoLoginPage() {
     )
   }
 
+  // Show loading state while authenticating
   return (
     <div className="min-h-screen bg-background flex items-center justify-center p-4">
       <Card className="w-full max-w-md">
