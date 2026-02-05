@@ -33,9 +33,9 @@ export default function DemoAutoLoginPage() {
         return
       }
 
-      // Demo credentials (these should match a demo user in your database)
-      const demoEmail = "demo@theboyshostel.com"
-      const demoPassword = "demo123456"
+      // Demo credentials (must match seed script credentials)
+      const demoEmail = "demo@hostel.com"
+      const demoPassword = "Demo123!"
 
       setLoginStatus("logging-in")
 
@@ -54,7 +54,8 @@ export default function DemoAutoLoginPage() {
           )
         } else {
           // Login successful, redirect to demo dashboard
-          window.location.href = "http://demo.localhost:3000"
+          router.push("/demo")
+          router.refresh()
         }
       } catch (err) {
         setLoginStatus("error")
