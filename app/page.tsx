@@ -42,14 +42,16 @@ export default function LandingPage() {
                 Start Free Trial
               </Button>
             </Link>
-            <Button size="lg" variant="outline" className="px-8">
-              Learn More
-            </Button>
+            <Link href="#features">
+              <Button size="lg" variant="outline" className="px-8">
+                Learn More
+              </Button>
+            </Link>
           </div>
         </div>
 
         {/* Features Grid */}
-        <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3 mb-16">
+        <div id="features" className="grid gap-6 md:grid-cols-2 lg:grid-cols-3 mb-16">
           <Card className="bg-card border-border">
             <CardHeader>
               <CardTitle className="flex items-center gap-2 text-foreground">
@@ -150,11 +152,11 @@ export default function LandingPage() {
             Get started with our free trial today.
           </p>
           <div className="flex gap-4 justify-center">
-            <a href="#register">
+            <Link href="#register">
               <Button size="lg" className="px-12">
                 Get Started Free
               </Button>
-            </a>
+            </Link>
             <Link href="/demo">
               <Button size="lg" variant="outline" className="px-12">
                 Try Demo

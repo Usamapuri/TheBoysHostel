@@ -14,6 +14,10 @@ export default async function TenantLayout({
 }) {
   const { subdomain } = await params
   
+  // Note: Authentication is handled by proxy.ts middleware
+  // The middleware redirects unauthenticated users to /login
+  // This layout wraps all pages including login, so we don't add auth checks here
+  
   return (
     <ClientProviders subdomain={subdomain}>
       {children}

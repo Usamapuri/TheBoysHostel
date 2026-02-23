@@ -8,14 +8,12 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Building2, Loader2 } from "lucide-react"
-import { useTenant } from "@/lib/tenant-context"
 import Link from "next/link"
 
 export default function LoginPage() {
   const router = useRouter()
   const params = useParams()
   const subdomain = params.subdomain as string
-  const { tenant, isLoading: tenantLoading } = useTenant()
   
   const [isLoading, setIsLoading] = useState(false)
   const [error, setError] = useState("")
@@ -51,13 +49,8 @@ export default function LoginPage() {
     }
   }
 
-  if (tenantLoading) {
-    return (
-      <div className="min-h-screen bg-background flex items-center justify-center">
-        <Loader2 className="h-8 w-8 animate-spin text-primary" />
-      </div>
-    )
-  }
+  // Format subdomain name for display
+  const displayName = subdomain.charAt(0).toUpperCase() + subdomain.slice(1)
 
   return (
     <div className="min-h-screen bg-gradient-to-b from-background to-muted flex items-center justify-center p-4">
@@ -70,7 +63,7 @@ export default function LoginPage() {
             </div>
             <div className="text-left">
               <h1 className="text-2xl font-bold text-foreground uppercase">
-                {tenant?.name || "Loading..."}
+                {displayName} Hostel
               </h1>
               <p className="text-sm text-muted-foreground">Admin Login</p>
             </div>

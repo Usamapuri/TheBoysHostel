@@ -111,19 +111,27 @@ export async function proxy(request: NextRequest) {
   const publicRoutes = ['/login', '/register']
   const isPublicRoute = publicRoutes.some(route => pathname === route || pathname.startsWith(route))
   
+  // Protected routes that require authentication
+  const protectedRoutes = ['/', '/students', '/finance', '/rooms', '/maintenance', '/settings', '/activity']
+  const isProtectedRoute = protectedRoutes.some(route => 
+    pathname === route || pathname.startsWith(route + '/')
+  )
+  
   // Demo subdomain gets special treatment (auto-login handled in the page)
   const isDemoSubdomain = subdomain === 'demo'
   
   // If accessing a protected route without authentication (and not demo)
-  if (!token && !isPublicRoute && !isDemoSubdomain) {
+  if (!token && isProtectedRoute && !isDemoSubdomain) {
     // Redirect to login page for this subdomain
-    const loginUrl = new URL(`http://${hostname}/login`, request.url)
+    const loginUrl = new URL(request.url)
+    loginUrl.pathname = '/login'
     return NextResponse.redirect(loginUrl)
   }
   
   // If authenticated and trying to access login page, redirect to dashboard
   if (token && pathname === '/login') {
-    const dashboardUrl = new URL(`http://${hostname}/`, request.url)
+    const dashboardUrl = new URL(request.url)
+    dashboardUrl.pathname = '/'
     return NextResponse.redirect(dashboardUrl)
   }
   
