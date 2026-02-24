@@ -1,7 +1,7 @@
 "use client"
 
 import { useEffect, useState } from "react"
-import { signIn, useSession } from "next-auth/react"
+import { signIn, signOut, useSession } from "next-auth/react"
 import { useRouter } from "next/navigation"
 import { Loader2, Building2 } from "lucide-react"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
@@ -16,7 +16,7 @@ const TenantDashboard = dynamic(
 export default function DemoAutoLoginPage() {
   const router = useRouter()
   const { data: session, status } = useSession()
-  const [loginStatus, setLoginStatus] = useState<"initializing" | "logging-in" | "error">("initializing")
+  const [loginStatus, setLoginStatus] = useState<"initializing" | "logging-in" | "switching-tenant" | "error">("initializing")
   const [error, setError] = useState("")
   const [mounted, setMounted] = useState(false)
 
@@ -29,10 +29,21 @@ export default function DemoAutoLoginPage() {
     if (!mounted) return
 
     async function autoLogin() {
-      // If already authenticated, show the dashboard (no redirect needed)
-      if (status === "authenticated") {
-        // Dashboard will be rendered below
-        return
+      // If already authenticated, check if it's the correct tenant
+      if (status === "authenticated" && session?.user) {
+        // Check if user is logged into a DIFFERENT tenant
+        if (session.user.subdomain && session.user.subdomain !== 'demo') {
+          // User is logged into another tenant - need to sign out first
+          setLoginStatus("switching-tenant")
+          await signOut({ redirect: false })
+          // After signout, the effect will run again and proceed with demo login
+          return
+        }
+        
+        // User is already logged into demo, show dashboard
+        if (session.user.subdomain === 'demo') {
+          return
+        }
       }
 
       // If still checking session, wait
@@ -70,7 +81,7 @@ export default function DemoAutoLoginPage() {
     }
 
     autoLogin()
-  }, [status, router, mounted])
+  }, [status, session, router, mounted])
 
   // Don't render anything until mounted (prevents SSR issues)
   if (!mounted) {
@@ -81,8 +92,8 @@ export default function DemoAutoLoginPage() {
     )
   }
 
-  // If authenticated, show the dashboard
-  if (status === "authenticated") {
+  // If authenticated with demo account, show the dashboard
+  if (status === "authenticated" && session?.user?.subdomain === 'demo') {
     return <TenantDashboard />
   }
 
@@ -135,7 +146,11 @@ export default function DemoAutoLoginPage() {
             </div>
             <div>
               <CardTitle>Demo Mode</CardTitle>
-              <CardDescription>Setting up your demo experience...</CardDescription>
+              <CardDescription>
+                {loginStatus === "switching-tenant" 
+                  ? "Switching to demo account..." 
+                  : "Setting up your demo experience..."}
+              </CardDescription>
             </div>
           </div>
         </CardHeader>
@@ -143,7 +158,9 @@ export default function DemoAutoLoginPage() {
           <div className="flex items-center justify-center gap-3">
             <Loader2 className="h-6 w-6 animate-spin text-primary" />
             <p className="text-muted-foreground">
-              {loginStatus === "initializing" ? "Initializing..." : "Logging you in..."}
+              {loginStatus === "initializing" && "Initializing..."}
+              {loginStatus === "logging-in" && "Logging you in..."}
+              {loginStatus === "switching-tenant" && "Switching tenants..."}
             </p>
           </div>
         </CardContent>

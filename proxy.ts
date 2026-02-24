@@ -120,12 +120,31 @@ export async function proxy(request: NextRequest) {
   // Demo subdomain gets special treatment (auto-login handled in the page)
   const isDemoSubdomain = subdomain === 'demo'
   
-  // If accessing a protected route without authentication (and not demo)
-  if (!token && isProtectedRoute && !isDemoSubdomain) {
-    // Redirect to login page for this subdomain
-    const loginUrl = new URL(request.url)
-    loginUrl.pathname = '/login'
-    return NextResponse.redirect(loginUrl)
+  // If accessing a protected route without authentication
+  if (!token && isProtectedRoute) {
+    // For demo, allow it to attempt auto-login (handled in demo page component)
+    // For others, redirect to login immediately
+    if (!isDemoSubdomain) {
+      const loginUrl = new URL(request.url)
+      loginUrl.pathname = '/login'
+      return NextResponse.redirect(loginUrl)
+    }
+    // Demo subdomain continues to page where auto-login is handled
+  }
+  
+  // CRITICAL: Validate tenant isolation
+  // If user is authenticated, ensure they're accessing the correct tenant
+  if (token && !isPublicRoute && isProtectedRoute) {
+    const tokenSubdomain = token.subdomain as string | undefined
+    
+    // If user has a specific tenant subdomain, ensure they're accessing their own tenant
+    if (tokenSubdomain && tokenSubdomain !== subdomain && !isDemoSubdomain) {
+      // User is trying to access a different tenant - redirect to their own tenant
+      const ownTenantUrl = new URL(request.url)
+      ownTenantUrl.hostname = `${tokenSubdomain}.${ownTenantUrl.hostname.split('.').slice(1).join('.')}`
+      ownTenantUrl.pathname = '/'
+      return NextResponse.redirect(ownTenantUrl)
+    }
   }
   
   // If authenticated and trying to access login page, redirect to dashboard
