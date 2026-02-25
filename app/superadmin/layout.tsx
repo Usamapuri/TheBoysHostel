@@ -3,7 +3,6 @@ import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth'
 import { SuperAdminNav } from '@/components/superadmin/superadmin-nav'
 import { SessionProvider } from '@/components/auth/session-provider'
-import { headers } from 'next/headers'
 
 // Force dynamic rendering
 export const dynamic = 'force-dynamic'
@@ -13,22 +12,23 @@ export default async function SuperAdminLayout({
 }: {
   children: React.ReactNode
 }) {
-  // Get the current pathname to check if this is the login page
-  const headersList = await headers()
-  const pathname = headersList.get('x-invoke-path') || headersList.get('referer') || ''
-  
-  // Allow login page without authentication
-  if (pathname.includes('/superadmin/login')) {
-    return <SessionProvider>{children}</SessionProvider>
-  }
+  // NOTE: Authentication for /superadmin routes is now handled by proxy.ts
+  // The proxy checks auth and redirects to /superadmin/login if not authenticated
+  // This layout just provides the UI wrapper
   
   const session = await getServerSession(authOptions)
   
-  // Check if user is super admin
-  if (!session || session.user.role !== 'SUPERADMIN') {
-    redirect('/superadmin/login') // Redirect to login, not home
+  // If no session, just render children (login page)
+  if (!session) {
+    return <SessionProvider>{children}</SessionProvider>
   }
   
+  // If session exists but not super admin, redirect to home
+  if (session.user.role !== 'SUPERADMIN') {
+    redirect('/')
+  }
+  
+  // Render super admin dashboard with navigation
   return (
     <SessionProvider>
       <div className="min-h-screen bg-background">

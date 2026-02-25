@@ -2,183 +2,127 @@ import { NextResponse } from 'next/server'
 import type { NextRequest } from 'next/server'
 import { getToken } from 'next-auth/jwt'
 
-// Next.js proxy for subdomain-based multi-tenant routing
+// Next.js proxy for PATH-BASED multi-tenant routing
+// Routes: /demo, /theboyshostel, /superadmin, etc.
 export async function proxy(request: NextRequest) {
   const pathname = request.nextUrl.pathname
   
-  // ULTRA-CRITICAL BYPASS: Skip ALL static assets FIRST (single check for performance)
-  // This prevents ANY interference with build workers, static generation, and error pages
+  // Skip static assets and build files
   if (pathname.includes('.') || pathname.startsWith('/_next')) {
     return NextResponse.next()
   }
   
-  // Skip API routes, favicon, and super admin routes
-  if (pathname.startsWith('/api') || pathname.startsWith('/favicon') || pathname.startsWith('/superadmin')) {
+  // Skip API routes and favicon
+  if (pathname.startsWith('/api') || pathname.startsWith('/favicon')) {
     return NextResponse.next()
   }
   
-  const hostname = request.headers.get('host') || ''
+  console.log('🔍 PROXY:', { pathname, url: request.url })
   
-  // DEBUG LOGGING
-  console.log('🔍 PROXY DEBUG:', { hostname, pathname, url: request.url })
+  // ============================================================================
+  // ROOT LANDING PAGE
+  // ============================================================================
+  if (pathname === '/') {
+    return NextResponse.next()
+  }
   
-  // Define your root domains (add your production domains here)
-  const rootDomains = [
-    'localhost:3000',
-    'localhost',
-    'hostelflow.up.railway.app',
-    'yourdomain.com',
-    'www.yourdomain.com',
-  ]
-  
-  // Check if it's a root domain
-  const isRootDomain = rootDomains.some(domain => hostname === domain || hostname.startsWith(domain))
-  
-  // If it's the root domain, allow access to specific paths
-  if (isRootDomain) {
-    // Allow landing page
-    if (pathname === '/') {
+  // ============================================================================
+  // SUPER ADMIN ROUTES (No tenant isolation)
+  // ============================================================================
+  if (pathname.startsWith('/superadmin')) {
+    // Allow login page without authentication
+    if (pathname === '/superadmin/login') {
       return NextResponse.next()
     }
     
-    // Allow demo route (auto-login handled in page)
-    if (pathname.startsWith('/demo')) {
-      const response = NextResponse.next()
-      response.headers.set('x-subdomain', 'demo')
-      return response
+    // Check if user is authenticated as super admin
+    const token = await getToken({ req: request, secret: process.env.NEXTAUTH_SECRET })
+    
+    if (!token || token.role !== 'SUPERADMIN') {
+      console.log('🚫 SUPERADMIN: Unauthorized, redirecting to login')
+      return NextResponse.redirect(new URL('/superadmin/login', request.url))
     }
     
-    // Allow super admin routes
-    if (pathname.startsWith('/superadmin')) {
-      return NextResponse.next()
-    }
-    
-    // Path-based tenant routes (e.g., /theboyshostel)
-    // Check authentication for protected tenant routes
-    const tenantPathMatch = pathname.match(/^\/([a-zA-Z0-9-]+)(\/|$)/)
-    if (tenantPathMatch) {
-      const tenantSlug = tenantPathMatch[1]
-      const token = await getToken({ req: request, secret: process.env.NEXTAUTH_SECRET })
-      
-      // Allow login and register pages for tenant routes
-      const isLoginOrRegister = pathname.endsWith('/login') || pathname.endsWith('/register')
-      
-      if (!token && !isLoginOrRegister) {
-        // Redirect to tenant login page
-        return NextResponse.redirect(new URL(`/${tenantSlug}/login`, request.url))
-      }
-      
-      // If authenticated and trying to access login, redirect to dashboard
-      if (token && isLoginOrRegister) {
-        return NextResponse.redirect(new URL(`/${tenantSlug}`, request.url))
-      }
-      
-      // Set x-subdomain header for server actions
-      const response = NextResponse.next()
-      response.headers.set('x-subdomain', tenantSlug)
-      return response
-    }
-    
-    // For any other route, redirect to landing
+    console.log('✅ SUPERADMIN: Authorized')
+    return NextResponse.next()
+  }
+  
+  // ============================================================================
+  // TENANT ROUTES (Path-based: /demo, /theboyshostel, etc.)
+  // ============================================================================
+  
+  // Match tenant routes like /demo, /theboyshostel, /anytenant
+  const tenantMatch = pathname.match(/^\/([a-zA-Z0-9-]+)(\/|$)/)
+  
+  if (!tenantMatch) {
+    // No tenant found, redirect to home
+    console.log('❌ NO TENANT MATCH, redirecting to home')
     return NextResponse.redirect(new URL('/', request.url))
   }
   
-  // Extract subdomain
-  let subdomain = hostname.split('.')[0]
+  const tenantSlug = tenantMatch[1]
+  const tenantPath = pathname.substring(tenantSlug.length + 1) || '/' // Path after /tenant
   
-  // Handle www prefix (strip it out)
-  if (subdomain === 'www') {
-    subdomain = hostname.split('.')[1] || ''
+  console.log('🏢 TENANT:', { tenantSlug, tenantPath })
+  
+  // Set tenant header for server actions
+  const response = NextResponse.next()
+  response.headers.set('x-subdomain', tenantSlug)
+  
+  // Public routes within tenant (no auth required)
+  const isLoginPage = tenantPath === '/login' || pathname.endsWith('/login')
+  const isRegisterPage = tenantPath === '/register' || pathname.endsWith('/register')
+  
+  if (isLoginPage || isRegisterPage) {
+    console.log('📄 PUBLIC PAGE:', tenantPath)
+    
+    // If already authenticated, redirect to dashboard
+    const token = await getToken({ req: request, secret: process.env.NEXTAUTH_SECRET })
+    if (token) {
+      console.log('✅ ALREADY AUTHENTICATED, redirecting to dashboard')
+      return NextResponse.redirect(new URL(`/${tenantSlug}`, request.url))
+    }
+    
+    return response
   }
   
-  // Remove port if present (for localhost:3000)
-  subdomain = subdomain.split(':')[0]
-  
-  // If no subdomain or subdomain is the same as hostname (like localhost), treat as root
-  if (!subdomain || subdomain === hostname.split(':')[0]) {
-    return NextResponse.next()
+  // ============================================================================
+  // DEMO AUTO-LOGIN (Special case)
+  // ============================================================================
+  if (tenantSlug === 'demo' && tenantPath === '/') {
+    console.log('🎮 DEMO: Allowing access for auto-login')
+    return response // Let demo page handle auto-login
   }
   
-  // Rewrite the URL to include the subdomain as a path parameter
-  // For example: theboyshostel.localhost:3000/dashboard -> localhost:3000/theboyshostel/dashboard
-  
-  // Skip rewrite if already in subdomain path
-  if (pathname.startsWith(`/${subdomain}`)) {
-    return NextResponse.next()
-  }
-  
-  // Check if the user is authenticated
+  // ============================================================================
+  // PROTECTED ROUTES - Require Authentication
+  // ============================================================================
   const token = await getToken({ req: request, secret: process.env.NEXTAUTH_SECRET })
   
-  // Public routes that don't require authentication
-  const publicRoutes = ['/login', '/register']
-  const isPublicRoute = publicRoutes.some(route => pathname === route || pathname.startsWith(route))
-  
-  // Protected routes that require authentication
-  const protectedRoutes = ['/', '/students', '/finance', '/rooms', '/maintenance', '/settings', '/activity']
-  const isProtectedRoute = protectedRoutes.some(route => 
-    pathname === route || pathname.startsWith(route + '/')
-  )
-  
-  // Demo subdomain gets special treatment (auto-login handled in the page)
-  const isDemoSubdomain = subdomain === 'demo'
-  
-  // DEBUG LOGGING
   console.log('🔐 AUTH CHECK:', { 
-    subdomain, 
-    pathname, 
-    hasToken: !!token, 
-    isPublicRoute, 
-    isProtectedRoute, 
-    isDemoSubdomain 
+    tenantSlug, 
+    tenantPath,
+    hasToken: !!token,
+    tokenTenant: token?.subdomain 
   })
   
-  // If accessing a protected route without authentication
-  if (!token && isProtectedRoute) {
-    // For demo, allow it to attempt auto-login (handled in demo page component)
-    // For others, redirect to login immediately
-    if (!isDemoSubdomain) {
-      const loginUrl = new URL(request.url)
-      loginUrl.pathname = '/login'
-      console.log('🚨 REDIRECT TO LOGIN:', loginUrl.toString())
-      return NextResponse.redirect(loginUrl)
-    }
-    console.log('✅ DEMO SUBDOMAIN: Allowing access for auto-login')
-    // Demo subdomain continues to rewrite (explicit - no early return needed)
+  if (!token) {
+    console.log('🚨 NO TOKEN, redirecting to login')
+    return NextResponse.redirect(new URL(`/${tenantSlug}/login`, request.url))
   }
   
-  // CRITICAL: Validate tenant isolation
-  // If user is authenticated, ensure they're accessing the correct tenant
-  if (token && !isPublicRoute && isProtectedRoute) {
-    const tokenSubdomain = token.subdomain as string | undefined
-    
-    // If user has a specific tenant subdomain, ensure they're accessing their own tenant
-    if (tokenSubdomain && tokenSubdomain !== subdomain && !isDemoSubdomain) {
-      // User is trying to access a different tenant - redirect to their own tenant
-      const ownTenantUrl = new URL(request.url)
-      ownTenantUrl.hostname = `${tokenSubdomain}.${ownTenantUrl.hostname.split('.').slice(1).join('.')}`
-      ownTenantUrl.pathname = '/'
-      return NextResponse.redirect(ownTenantUrl)
-    }
+  // ============================================================================
+  // TENANT ISOLATION - Ensure user accesses correct tenant
+  // ============================================================================
+  const tokenTenant = token.subdomain as string | undefined
+  
+  if (tokenTenant && tokenTenant !== tenantSlug && tenantSlug !== 'demo') {
+    console.log('⚠️ WRONG TENANT:', { tokenTenant, requestedTenant: tenantSlug })
+    console.log('🔄 REDIRECTING to correct tenant')
+    return NextResponse.redirect(new URL(`/${tokenTenant}`, request.url))
   }
   
-  // If authenticated and trying to access login page, redirect to dashboard
-  if (token && pathname === '/login') {
-    const dashboardUrl = new URL(request.url)
-    dashboardUrl.pathname = '/'
-    return NextResponse.redirect(dashboardUrl)
-  }
-  
-  // Rewrite to subdomain route
-  const url = request.nextUrl.clone()
-  url.pathname = `/${subdomain}${pathname}`
-  
-  // Add subdomain as header for easy access in components
-  const response = NextResponse.rewrite(url)
-  response.headers.set('x-subdomain', subdomain)
-  
-  console.log('📝 REWRITE:', { from: pathname, to: url.pathname, subdomain })
-  
+  console.log('✅ AUTH PASSED:', { tenantSlug, user: token.email })
   return response
 }
 
