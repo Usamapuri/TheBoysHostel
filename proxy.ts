@@ -19,6 +19,9 @@ export async function proxy(request: NextRequest) {
   
   const hostname = request.headers.get('host') || ''
   
+  // DEBUG LOGGING
+  console.log('🔍 PROXY DEBUG:', { hostname, pathname, url: request.url })
+  
   // Define your root domains (add your production domains here)
   const rootDomains = [
     'localhost:3000',
@@ -120,6 +123,16 @@ export async function proxy(request: NextRequest) {
   // Demo subdomain gets special treatment (auto-login handled in the page)
   const isDemoSubdomain = subdomain === 'demo'
   
+  // DEBUG LOGGING
+  console.log('🔐 AUTH CHECK:', { 
+    subdomain, 
+    pathname, 
+    hasToken: !!token, 
+    isPublicRoute, 
+    isProtectedRoute, 
+    isDemoSubdomain 
+  })
+  
   // If accessing a protected route without authentication
   if (!token && isProtectedRoute) {
     // For demo, allow it to attempt auto-login (handled in demo page component)
@@ -127,9 +140,11 @@ export async function proxy(request: NextRequest) {
     if (!isDemoSubdomain) {
       const loginUrl = new URL(request.url)
       loginUrl.pathname = '/login'
+      console.log('🚨 REDIRECT TO LOGIN:', loginUrl.toString())
       return NextResponse.redirect(loginUrl)
     }
-    // Demo subdomain continues to page where auto-login is handled
+    console.log('✅ DEMO SUBDOMAIN: Allowing access for auto-login')
+    // Demo subdomain continues to rewrite (explicit - no early return needed)
   }
   
   // CRITICAL: Validate tenant isolation
@@ -161,6 +176,8 @@ export async function proxy(request: NextRequest) {
   // Add subdomain as header for easy access in components
   const response = NextResponse.rewrite(url)
   response.headers.set('x-subdomain', subdomain)
+  
+  console.log('📝 REWRITE:', { from: pathname, to: url.pathname, subdomain })
   
   return response
 }
