@@ -39,18 +39,13 @@ Next.js matches to: app/(tenant)/[subdomain]/students/page.tsx
 
 ### 2. Authentication Flow
 
-**For Regular Tenants:**
-1. User visits `/theboyshostel`
+**For All Tenants (Including Demo):**
+1. User visits `/demo` or `/theboyshostel`
 2. Proxy checks authentication
-3. No token → Redirect to `/theboyshostel/login`
-4. User logs in
-5. Proxy allows access to `/theboyshostel/*` routes
-
-**For Demo (Auto-Login):**
-1. User visits `/demo`
-2. Proxy allows access (special case)
-3. Demo page auto-logs in with demo credentials
-4. User sees dashboard immediately
+3. No token → Redirect to `/demo/login` or `/theboyshostel/login`
+4. User enters credentials and logs in
+5. Proxy allows access to `/demo/*` or `/theboyshostel/*` routes
+6. Proxy enforces tenant isolation
 
 **For Super Admin:**
 1. User visits `/superadmin/login`
@@ -120,19 +115,31 @@ app/
 
 ## Login Credentials
 
-After running seed:
+After running seed (all users must login manually):
 
 - **Super Admin:** `superadmin@hostelflow.com` / `SuperAdmin123!`
-- **Demo:** Auto-login (no credentials needed)
+- **Demo Hostel:** `demo@hostel.com` / `Demo123!`
 - **The Boys Hostel:** `admin@theboyshostel.com` / `Admin123!`
+
+## Authentication Flow
+
+**All users (including demo) must now authenticate:**
+
+1. User visits `/demo` or `/theboyshostel`
+2. Proxy checks authentication → No token found
+3. Redirects to `/demo/login` or `/theboyshostel/login`
+4. User enters credentials and logs in
+5. Proxy validates token and allows access
+6. Proxy enforces tenant isolation (can't access other tenants)
 
 ## Testing Checklist
 
 After Railway redeploys (2-3 minutes):
 
 - [ ] Visit `/` → Shows landing page
-- [ ] Visit `/demo` → Auto-logs in and shows demo dashboard
-- [ ] Visit `/theboyshostel` → Shows login page
+- [ ] Visit `/demo` → Redirects to `/demo/login`
+- [ ] Login to demo with credentials → Shows demo dashboard
+- [ ] Visit `/theboyshostel` → Redirects to `/theboyshostel/login`
 - [ ] Login to theboyshostel → Shows dashboard
 - [ ] Add data to theboyshostel → Data persists (no more reset!)
 - [ ] Visit `/superadmin/login` → Shows super admin login

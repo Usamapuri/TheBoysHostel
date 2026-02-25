@@ -87,14 +87,6 @@ export async function proxy(request: NextRequest) {
   }
   
   // ============================================================================
-  // DEMO AUTO-LOGIN (Special case)
-  // ============================================================================
-  if (tenantSlug === 'demo' && tenantPath === '/') {
-    console.log('🎮 DEMO: Allowing access for auto-login')
-    return response // Let demo page handle auto-login
-  }
-  
-  // ============================================================================
   // PROTECTED ROUTES - Require Authentication
   // ============================================================================
   const token = await getToken({ req: request, secret: process.env.NEXTAUTH_SECRET })
@@ -116,7 +108,7 @@ export async function proxy(request: NextRequest) {
   // ============================================================================
   const tokenTenant = token.subdomain as string | undefined
   
-  if (tokenTenant && tokenTenant !== tenantSlug && tenantSlug !== 'demo') {
+  if (tokenTenant && tokenTenant !== tenantSlug) {
     console.log('⚠️ WRONG TENANT:', { tokenTenant, requestedTenant: tenantSlug })
     console.log('🔄 REDIRECTING to correct tenant')
     return NextResponse.redirect(new URL(`/${tokenTenant}`, request.url))
