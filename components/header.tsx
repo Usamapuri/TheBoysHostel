@@ -1,9 +1,10 @@
 "use client"
 
-import { Building2, LogOut } from "lucide-react"
+import { Building2, LogOut, Settings } from "lucide-react"
 import { useTenant } from "@/lib/tenant-context"
 import { Button } from "@/components/ui/button"
 import { signOut } from "next-auth/react"
+import Link from "next/link"
 
 export function Header() {
   const { tenant } = useTenant()
@@ -23,15 +24,28 @@ export function Header() {
               <p className="text-xs text-muted-foreground">Admin Dashboard</p>
             </div>
           </div>
-          <Button
-            variant="ghost"
-            size="sm"
-            onClick={() => signOut({ callbackUrl: "/" })}
-            className="flex items-center gap-2 text-muted-foreground hover:text-foreground"
-          >
-            <LogOut className="h-4 w-4" />
-            Sign out
-          </Button>
+          <div className="flex items-center gap-1">
+            <Button
+              variant="ghost"
+              size="sm"
+              asChild
+              className="flex items-center gap-2 text-muted-foreground hover:text-foreground"
+            >
+              <Link href={`/${tenant?.subdomain}/settings`}>
+                <Settings className="h-4 w-4" />
+                Settings
+              </Link>
+            </Button>
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => signOut({ callbackUrl: "/" })}
+              className="flex items-center gap-2 text-muted-foreground hover:text-foreground"
+            >
+              <LogOut className="h-4 w-4" />
+              Sign out
+            </Button>
+          </div>
         </div>
       </div>
     </header>
