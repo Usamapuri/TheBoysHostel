@@ -5,7 +5,9 @@ import { useEffect } from "react"
 import { TenantProvider, useTenant } from "@/lib/tenant-context"
 import { SessionProvider } from "@/components/auth/session-provider"
 
-function hexToOklch(hex: string): string | null {
+function hexToOklchParts(hex: string): { L: number; C: number; H: number } | null {
+  if (!/^#[0-9a-fA-F]{6}$/.test(hex)) return null
+
   const r = parseInt(hex.slice(1, 3), 16) / 255
   const g = parseInt(hex.slice(3, 5), 16) / 255
   const b = parseInt(hex.slice(5, 7), 16) / 255
@@ -28,7 +30,11 @@ function hexToOklch(hex: string): string | null {
   let H = (Math.atan2(okB, okA) * 180) / Math.PI
   if (H < 0) H += 360
 
-  return `oklch(${okL.toFixed(2)} ${C.toFixed(2)} ${H.toFixed(0)})`
+  return { L: okL, C, H }
+}
+
+function oklch(L: number, C: number, H: number) {
+  return `oklch(${L.toFixed(3)} ${C.toFixed(3)} ${H.toFixed(0)})`
 }
 
 function TenantThemeInjector() {
@@ -37,19 +43,38 @@ function TenantThemeInjector() {
   useEffect(() => {
     if (!tenant?.primaryColor) return
 
-    const oklch = hexToOklch(tenant.primaryColor)
-    if (!oklch) return
+    const parts = hexToOklchParts(tenant.primaryColor)
+    if (!parts) return
 
+    const { L, C, H } = parts
     const root = document.documentElement.style
-    const vars = [
-      "--primary", "--accent", "--ring",
-      "--sidebar-primary", "--sidebar-ring",
-      "--chart-1", "--success",
-    ]
-    vars.forEach((v) => root.setProperty(v, oklch))
+    const tint = 0.015
+
+    const theme: Record<string, string> = {
+      "--primary":                  oklch(L, C, H),
+      "--accent":                   oklch(L, C, H),
+      "--ring":                     oklch(L, C, H),
+      "--sidebar-primary":          oklch(L, C, H),
+      "--sidebar-ring":             oklch(L, C, H),
+      "--chart-1":                  oklch(L, C, H),
+      "--success":                  oklch(L, C, H),
+
+      "--background":               oklch(0.13, tint, H),
+      "--card":                     oklch(0.17, tint, H),
+      "--popover":                  oklch(0.17, tint, H),
+      "--secondary":                oklch(0.22, tint, H),
+      "--muted":                    oklch(0.22, tint, H),
+      "--border":                   oklch(0.28, tint, H),
+      "--input":                    oklch(0.22, tint, H),
+      "--sidebar":                  oklch(0.15, tint, H),
+      "--sidebar-accent":           oklch(0.22, tint, H),
+      "--sidebar-border":           oklch(0.28, tint, H),
+    }
+
+    Object.entries(theme).forEach(([k, v]) => root.setProperty(k, v))
 
     return () => {
-      vars.forEach((v) => root.removeProperty(v))
+      Object.keys(theme).forEach((k) => root.removeProperty(k))
     }
   }, [tenant?.primaryColor])
 

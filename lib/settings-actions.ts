@@ -77,9 +77,10 @@ export async function updateTenantLocalization(data: {
 
   const tenantId = await getCurrentTenantId()
 
-  const validCurrencies = ["USD", "INR", "NGN", "EUR", "GBP"]
-  if (!validCurrencies.includes(data.currency)) {
-    throw new Error("Invalid currency")
+  try {
+    new Intl.NumberFormat(undefined, { style: "currency", currency: data.currency })
+  } catch {
+    throw new Error("Invalid currency code")
   }
 
   await prisma.tenant.update({

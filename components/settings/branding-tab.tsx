@@ -8,7 +8,7 @@ import { Label } from "@/components/ui/label"
 import { toast } from "sonner"
 import { updateTenantBranding } from "@/lib/settings-actions"
 import type { Tenant } from "@/lib/tenant-context"
-import { Palette, Loader2, ImageIcon } from "lucide-react"
+import { Palette, Loader2, ImageIcon, ImageOff } from "lucide-react"
 
 interface BrandingTabProps {
   tenant: Tenant
@@ -23,6 +23,7 @@ export function BrandingTab({ tenant }: BrandingTabProps) {
   const [saving, setSaving] = useState(false)
   const [primaryColor, setPrimaryColor] = useState(tenant.primaryColor)
   const [logoUrl, setLogoUrl] = useState(tenant.logoUrl ?? "")
+  const [logoError, setLogoError] = useState(false)
 
   async function handleSave() {
     if (!/^#[0-9a-fA-F]{6}$/.test(primaryColor)) {
@@ -60,13 +61,19 @@ export function BrandingTab({ tenant }: BrandingTabProps) {
         <div className="space-y-3">
           <Label>Logo</Label>
           <div className="flex items-center gap-4">
-            <div className="flex h-20 w-20 items-center justify-center rounded-lg border-2 border-dashed border-border bg-muted/50">
-              {logoUrl ? (
+            <div className="flex h-20 w-20 items-center justify-center rounded-lg border-2 border-dashed border-border bg-muted/50 overflow-hidden">
+              {logoUrl && !logoError ? (
                 <img
                   src={logoUrl}
                   alt="Logo"
                   className="h-full w-full rounded-lg object-cover"
+                  onError={() => setLogoError(true)}
                 />
+              ) : logoUrl && logoError ? (
+                <div className="flex flex-col items-center gap-1">
+                  <ImageOff className="h-5 w-5 text-destructive" />
+                  <span className="text-[9px] text-destructive">Invalid</span>
+                </div>
               ) : (
                 <ImageIcon className="h-8 w-8 text-muted-foreground" />
               )}
@@ -74,11 +81,11 @@ export function BrandingTab({ tenant }: BrandingTabProps) {
             <div className="flex-1 space-y-2">
               <Input
                 value={logoUrl}
-                onChange={(e) => setLogoUrl(e.target.value)}
-                placeholder="Paste logo URL (image upload coming soon)"
+                onChange={(e) => { setLogoUrl(e.target.value); setLogoError(false) }}
+                placeholder="https://example.com/logo.png"
               />
               <p className="text-xs text-muted-foreground">
-                Enter a URL to your logo image. Direct file upload will be available soon.
+                Paste a <span className="font-medium">direct image URL</span> (must end in .png, .jpg, .svg, etc. -- not a webpage link).
               </p>
             </div>
           </div>
