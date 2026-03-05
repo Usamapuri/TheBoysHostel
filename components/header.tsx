@@ -2,6 +2,7 @@
 
 import { Building2, LogOut, Settings } from "lucide-react"
 import { useTenant } from "@/lib/tenant-context"
+import { normalizeImageUrl } from "@/lib/normalize-image-url"
 import { Button } from "@/components/ui/button"
 import { signOut } from "next-auth/react"
 import Link from "next/link"
@@ -14,9 +15,18 @@ export function Header() {
       <div className="container mx-auto px-4 py-4">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-3">
-            <div className="p-2 rounded-lg bg-primary/10">
-              <Building2 className="h-6 w-6 text-primary" />
-            </div>
+            {tenant?.logoUrl ? (
+              <img
+                src={normalizeImageUrl(tenant.logoUrl)}
+                alt={tenant.name}
+                className="h-10 w-10 rounded-lg object-cover"
+                onError={(e) => { (e.target as HTMLImageElement).style.display = "none" }}
+              />
+            ) : (
+              <div className="p-2 rounded-lg bg-primary/10">
+                <Building2 className="h-6 w-6 text-primary" />
+              </div>
+            )}
             <div>
               <h1 className="text-xl font-bold text-foreground uppercase">
                 {tenant?.name || "Loading..."}

@@ -44,6 +44,7 @@ export async function updateTenantProfile(data: {
 export async function updateTenantBranding(data: {
   logoUrl?: string
   primaryColor: string
+  backgroundColor: string
 }) {
   const session = await requireSession()
 
@@ -58,6 +59,7 @@ export async function updateTenantBranding(data: {
     data: {
       logoUrl: data.logoUrl || null,
       primaryColor: data.primaryColor,
+      backgroundColor: data.backgroundColor,
     },
   })
 

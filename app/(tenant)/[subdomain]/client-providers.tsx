@@ -43,32 +43,35 @@ function TenantThemeInjector() {
   useEffect(() => {
     if (!tenant?.primaryColor) return
 
-    const parts = hexToOklchParts(tenant.primaryColor)
-    if (!parts) return
+    const primary = hexToOklchParts(tenant.primaryColor)
+    if (!primary) return
 
-    const { L, C, H } = parts
+    const bg = hexToOklchParts(tenant.backgroundColor ?? "#0a0a0a")
     const root = document.documentElement.style
-    const tint = 0.015
+
+    const bgL = bg?.L ?? 0.13
+    const bgC = bg?.C ?? 0.01
+    const bgH = bg?.H ?? 0
 
     const theme: Record<string, string> = {
-      "--primary":                  oklch(L, C, H),
-      "--accent":                   oklch(L, C, H),
-      "--ring":                     oklch(L, C, H),
-      "--sidebar-primary":          oklch(L, C, H),
-      "--sidebar-ring":             oklch(L, C, H),
-      "--chart-1":                  oklch(L, C, H),
-      "--success":                  oklch(L, C, H),
+      "--primary":                  oklch(primary.L, primary.C, primary.H),
+      "--accent":                   oklch(primary.L, primary.C, primary.H),
+      "--ring":                     oklch(primary.L, primary.C, primary.H),
+      "--sidebar-primary":          oklch(primary.L, primary.C, primary.H),
+      "--sidebar-ring":             oklch(primary.L, primary.C, primary.H),
+      "--chart-1":                  oklch(primary.L, primary.C, primary.H),
+      "--success":                  oklch(primary.L, primary.C, primary.H),
 
-      "--background":               oklch(0.13, tint, H),
-      "--card":                     oklch(0.17, tint, H),
-      "--popover":                  oklch(0.17, tint, H),
-      "--secondary":                oklch(0.22, tint, H),
-      "--muted":                    oklch(0.22, tint, H),
-      "--border":                   oklch(0.28, tint, H),
-      "--input":                    oklch(0.22, tint, H),
-      "--sidebar":                  oklch(0.15, tint, H),
-      "--sidebar-accent":           oklch(0.22, tint, H),
-      "--sidebar-border":           oklch(0.28, tint, H),
+      "--background":               oklch(bgL, bgC, bgH),
+      "--card":                     oklch(Math.min(bgL + 0.04, 0.25), bgC, bgH),
+      "--popover":                  oklch(Math.min(bgL + 0.04, 0.25), bgC, bgH),
+      "--secondary":                oklch(Math.min(bgL + 0.09, 0.30), bgC, bgH),
+      "--muted":                    oklch(Math.min(bgL + 0.09, 0.30), bgC, bgH),
+      "--border":                   oklch(Math.min(bgL + 0.15, 0.35), bgC, bgH),
+      "--input":                    oklch(Math.min(bgL + 0.09, 0.30), bgC, bgH),
+      "--sidebar":                  oklch(Math.min(bgL + 0.02, 0.20), bgC, bgH),
+      "--sidebar-accent":           oklch(Math.min(bgL + 0.09, 0.30), bgC, bgH),
+      "--sidebar-border":           oklch(Math.min(bgL + 0.15, 0.35), bgC, bgH),
     }
 
     Object.entries(theme).forEach(([k, v]) => root.setProperty(k, v))
@@ -76,7 +79,7 @@ function TenantThemeInjector() {
     return () => {
       Object.keys(theme).forEach((k) => root.removeProperty(k))
     }
-  }, [tenant?.primaryColor])
+  }, [tenant?.primaryColor, tenant?.backgroundColor])
 
   return null
 }

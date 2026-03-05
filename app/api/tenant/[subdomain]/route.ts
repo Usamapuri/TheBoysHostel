@@ -21,6 +21,7 @@ export async function GET(
         currency: true,
         timezone: true,
         primaryColor: true,
+        backgroundColor: true,
         address: true,
         phone: true,
         contactEmail: true,

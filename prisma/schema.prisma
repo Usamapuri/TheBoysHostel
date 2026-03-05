@@ -29,13 +29,14 @@ model Tenant {
   suspensionReason String?
 
   // Settings
-  logoUrl      String?
-  currency     String   @default("USD")
-  timezone     String   @default("UTC")
-  primaryColor String   @default("#22c55e")
-  address      String?
-  phone        String?
-  contactEmail String?
+  logoUrl         String?
+  currency        String   @default("USD")
+  timezone        String   @default("UTC")
+  primaryColor    String   @default("#22c55e")
+  backgroundColor String   @default("#0a0a0a")
+  address         String?
+  phone           String?
+  contactEmail    String?
 
   // Relations
   users            User[]

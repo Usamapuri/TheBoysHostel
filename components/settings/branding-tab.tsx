@@ -7,6 +7,7 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { toast } from "sonner"
 import { updateTenantBranding } from "@/lib/settings-actions"
+import { normalizeImageUrl } from "@/lib/normalize-image-url"
 import type { Tenant } from "@/lib/tenant-context"
 import { Palette, Loader2, ImageIcon, ImageOff } from "lucide-react"
 
@@ -19,9 +20,15 @@ const PRESET_COLORS = [
   "#ef4444", "#ec4899", "#14b8a6", "#f97316",
 ]
 
+const PRESET_BG_COLORS = [
+  "#0a0a0a", "#0c1222", "#0f1519", "#13100e",
+  "#0d0f1a", "#10141a", "#0e1210", "#140e0e",
+]
+
 export function BrandingTab({ tenant }: BrandingTabProps) {
   const [saving, setSaving] = useState(false)
   const [primaryColor, setPrimaryColor] = useState(tenant.primaryColor)
+  const [backgroundColor, setBackgroundColor] = useState(tenant.backgroundColor)
   const [logoUrl, setLogoUrl] = useState(tenant.logoUrl ?? "")
   const [logoError, setLogoError] = useState(false)
 
@@ -35,7 +42,8 @@ export function BrandingTab({ tenant }: BrandingTabProps) {
     try {
       await updateTenantBranding({
         primaryColor,
-        logoUrl: logoUrl.trim() || undefined,
+        backgroundColor,
+        logoUrl: logoUrl.trim() ? normalizeImageUrl(logoUrl.trim()) : undefined,
       })
       toast.success("Branding updated successfully")
     } catch (err) {
@@ -64,7 +72,7 @@ export function BrandingTab({ tenant }: BrandingTabProps) {
             <div className="flex h-20 w-20 items-center justify-center rounded-lg border-2 border-dashed border-border bg-muted/50 overflow-hidden">
               {logoUrl && !logoError ? (
                 <img
-                  src={logoUrl}
+                  src={normalizeImageUrl(logoUrl)}
                   alt="Logo"
                   className="h-full w-full rounded-lg object-cover"
                   onError={() => setLogoError(true)}
@@ -85,7 +93,7 @@ export function BrandingTab({ tenant }: BrandingTabProps) {
                 placeholder="https://example.com/logo.png"
               />
               <p className="text-xs text-muted-foreground">
-                Paste a <span className="font-medium">direct image URL</span> (must end in .png, .jpg, .svg, etc. -- not a webpage link).
+                Paste an image URL or a Google Drive / Dropbox share link. It will be auto-converted.
               </p>
             </div>
           </div>
@@ -126,6 +134,46 @@ export function BrandingTab({ tenant }: BrandingTabProps) {
               />
             ))}
           </div>
+        </div>
+
+        {/* Background Color Picker */}
+        <div className="space-y-3">
+          <Label>Background Color</Label>
+          <div className="flex items-center gap-3">
+            <input
+              type="color"
+              value={backgroundColor}
+              onChange={(e) => setBackgroundColor(e.target.value)}
+              className="h-10 w-14 cursor-pointer rounded border border-border bg-transparent"
+            />
+            <Input
+              value={backgroundColor}
+              onChange={(e) => setBackgroundColor(e.target.value)}
+              placeholder="#0a0a0a"
+              className="w-32 font-mono"
+            />
+            <div
+              className="h-10 flex-1 rounded-md border border-border"
+              style={{ backgroundColor }}
+            />
+          </div>
+          <div className="flex flex-wrap gap-2 pt-1">
+            {PRESET_BG_COLORS.map((color) => (
+              <button
+                key={color}
+                type="button"
+                onClick={() => setBackgroundColor(color)}
+                className="h-8 w-8 rounded-full border-2 transition-transform hover:scale-110"
+                style={{
+                  backgroundColor: color,
+                  borderColor: backgroundColor === color ? "white" : "transparent",
+                }}
+              />
+            ))}
+          </div>
+          <p className="text-xs text-muted-foreground">
+            Controls the app background, cards, sidebar, and input areas. Use dark colors for best readability.
+          </p>
         </div>
 
         <div className="flex justify-end">

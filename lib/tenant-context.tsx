@@ -16,6 +16,7 @@ export interface Tenant {
   currency: string
   timezone: string
   primaryColor: string
+  backgroundColor: string
   address: string | null
   phone: string | null
   contactEmail: string | null
