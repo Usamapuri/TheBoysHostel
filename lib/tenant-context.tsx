@@ -12,6 +12,13 @@ export interface Tenant {
   subdomain: string
   createdAt: Date
   isActive: boolean
+  logoUrl: string | null
+  currency: string
+  timezone: string
+  primaryColor: string
+  address: string | null
+  phone: string | null
+  contactEmail: string | null
 }
 
 interface TenantContextType {

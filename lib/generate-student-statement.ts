@@ -1,11 +1,13 @@
 import jsPDF from "jspdf"
 import autoTable from "jspdf-autotable"
+import { formatCurrency } from "@/lib/format-currency"
 import type { Student, Transaction } from "./types"
 
 export function generateStudentStatement(
   student: Student,
   transactions: Transaction[],
-  roomNumber?: string
+  roomNumber?: string,
+  currency?: string,
 ) {
   const doc = new jsPDF()
   
@@ -50,13 +52,13 @@ export function generateStudentStatement(
   doc.setFont("helvetica", "normal")
   doc.setFontSize(10)
   
-  doc.text(`Total Charges: $${totalAmount.toFixed(2)}`, 20, summaryY + 8)
+  doc.text(`Total Charges: ${formatCurrency(totalAmount, currency)}`, 20, summaryY + 8)
   doc.setTextColor(34, 197, 94) // Green
-  doc.text(`Total Paid: $${totalPaid.toFixed(2)}`, 20, summaryY + 15)
+  doc.text(`Total Paid: ${formatCurrency(totalPaid, currency)}`, 20, summaryY + 15)
   
   if (totalUnpaid > 0) {
     doc.setTextColor(239, 68, 68) // Red
-    doc.text(`Outstanding Balance: $${totalUnpaid.toFixed(2)}`, 20, summaryY + 22)
+    doc.text(`Outstanding Balance: ${formatCurrency(totalUnpaid, currency)}`, 20, summaryY + 22)
   } else {
     doc.setTextColor(34, 197, 94) // Green
     doc.text("Account Status: All Cleared", 20, summaryY + 22)
@@ -80,7 +82,7 @@ export function generateStudentStatement(
       new Date(t.date).toLocaleDateString(),
       t.type,
       t.description || t.month,
-      `$${t.amount.toFixed(2)}`,
+      formatCurrency(t.amount, currency),
       t.status,
     ]),
     theme: "striped",

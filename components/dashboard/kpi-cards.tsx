@@ -3,6 +3,7 @@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Progress } from "@/components/ui/progress"
 import { Users, TrendingUp, AlertCircle, Wrench } from "lucide-react"
+import { formatCurrency } from "@/lib/format-currency"
 
 interface KPICardsProps {
   occupancyRate: number
@@ -18,6 +19,7 @@ interface KPICardsProps {
   pendingMaintenance: number
   onNavigateToStudents?: () => void
   onNavigateToMaintenance?: () => void
+  currency?: string
 }
 
 export function KPICards({
@@ -34,6 +36,7 @@ export function KPICards({
   pendingMaintenance,
   onNavigateToStudents,
   onNavigateToMaintenance,
+  currency,
 }: KPICardsProps) {
   const isProfitable = netProfit >= 0
 
@@ -73,10 +76,10 @@ export function KPICards({
         </CardHeader>
         <CardContent className="space-y-2">
           <div className={`text-2xl font-bold ${isProfitable ? "text-success" : "text-danger"}`}>
-            ${Math.abs(netProfit).toFixed(0)}
+            {formatCurrency(Math.abs(netProfit), currency)}
           </div>
           <p className="text-[11px] text-muted-foreground/80 leading-relaxed">
-            Rev: ${totalRevenue} | Exp: ${totalExpenses}
+            Rev: {formatCurrency(totalRevenue, currency)} | Exp: {formatCurrency(totalExpenses, currency)}
           </p>
         </CardContent>
       </Card>
@@ -91,7 +94,7 @@ export function KPICards({
           <AlertCircle className="h-4 w-4 text-warning" />
         </CardHeader>
         <CardContent className="space-y-1">
-          <div className="text-2xl font-bold text-foreground">${overdueDues}</div>
+          <div className="text-2xl font-bold text-foreground">{formatCurrency(overdueDues, currency)}</div>
           <p className="text-[11px] text-muted-foreground/80 leading-relaxed">
             From {overdueStudentsCount} student(s) currently late
           </p>

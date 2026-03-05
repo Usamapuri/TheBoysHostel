@@ -11,6 +11,7 @@ import {
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { User, Phone, Mail, Calendar, AlertCircle, ArrowRightLeft } from "lucide-react"
+import { formatCurrency } from "@/lib/format-currency"
 import type { Student, Room } from "@/lib/types"
 
 interface StudentInfoDialogProps {
@@ -20,6 +21,7 @@ interface StudentInfoDialogProps {
     room: Room | null
     bedLabel: string
     onTransferClick: () => void
+    currency?: string
 }
 
 export function StudentInfoDialog({
@@ -29,6 +31,7 @@ export function StudentInfoDialog({
     room,
     bedLabel,
     onTransferClick,
+    currency,
 }: StudentInfoDialogProps) {
     if (!student || !room) return null
 
@@ -105,7 +108,7 @@ export function StudentInfoDialog({
                                 variant={student.securityDepositStatus === "Paid" ? "default" : "destructive"}
                                 className="text-xs"
                             >
-                                {student.securityDepositStatus || "Pending"} - ₹{student.securityDeposit || 500}
+                                {student.securityDepositStatus || "Pending"} - {formatCurrency(student.securityDeposit || 500, currency)}
                             </Badge>
                         </div>
                     </div>

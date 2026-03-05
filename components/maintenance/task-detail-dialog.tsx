@@ -6,15 +6,17 @@ import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } f
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Badge } from "@/components/ui/badge"
+import { formatCurrency } from "@/lib/format-currency"
 
 interface TaskDetailDialogProps {
   task: MaintenanceTask | null
   open: boolean
   onOpenChange: (open: boolean) => void
   onCompleteWithCost: (taskId: string, cost?: number) => void
+  currency?: string
 }
 
-export function TaskDetailDialog({ task, open, onOpenChange, onCompleteWithCost }: TaskDetailDialogProps) {
+export function TaskDetailDialog({ task, open, onOpenChange, onCompleteWithCost, currency }: TaskDetailDialogProps) {
   const [showCostInput, setShowCostInput] = useState(false)
   const [cost, setCost] = useState("")
 
@@ -95,7 +97,7 @@ export function TaskDetailDialog({ task, open, onOpenChange, onCompleteWithCost 
           {task.cost !== undefined && (
             <div>
               <p className="text-xs text-muted-foreground">Cost Incurred</p>
-              <p className="text-sm font-medium text-foreground">₹{task.cost}</p>
+              <p className="text-sm font-medium text-foreground">{formatCurrency(task.cost, currency)}</p>
             </div>
           )}
 

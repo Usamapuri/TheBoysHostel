@@ -17,6 +17,13 @@ export async function GET(
         subdomain: true,
         isActive: true,
         createdAt: true,
+        logoUrl: true,
+        currency: true,
+        timezone: true,
+        primaryColor: true,
+        address: true,
+        phone: true,
+        contactEmail: true,
       },
     })
 

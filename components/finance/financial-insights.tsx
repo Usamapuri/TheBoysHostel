@@ -3,14 +3,16 @@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { BarChart, Bar, PieChart, Pie, Cell, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from "recharts"
 import { TrendingUp, PieChartIcon } from "lucide-react"
+import { formatCurrency } from "@/lib/format-currency"
 import type { Transaction, Expense } from "@/lib/types"
 
 interface FinancialInsightsProps {
   transactions: Transaction[]
   expenses: Expense[]
+  currency?: string
 }
 
-export function FinancialInsights({ transactions, expenses }: FinancialInsightsProps) {
+export function FinancialInsights({ transactions, expenses, currency }: FinancialInsightsProps) {
   // Generate last 6 months of data
   const getMonthlyData = () => {
     const months = []
@@ -71,7 +73,7 @@ export function FinancialInsights({ transactions, expenses }: FinancialInsightsP
           <p className="text-foreground font-medium">{payload[0].payload.month}</p>
           {payload.map((entry: any, index: number) => (
             <p key={index} style={{ color: entry.color }} className="text-sm">
-              {entry.name}: ${entry.value}
+              {entry.name}: {formatCurrency(entry.value, currency)}
             </p>
           ))}
         </div>
@@ -86,7 +88,7 @@ export function FinancialInsights({ transactions, expenses }: FinancialInsightsP
         <div className="bg-card border border-border rounded-lg p-3 shadow-lg">
           <p className="text-foreground font-medium">{payload[0].name}</p>
           <p className="text-sm text-muted-foreground">
-            ${payload[0].value.toFixed(2)}
+            {formatCurrency(payload[0].value, currency)}
           </p>
         </div>
       )

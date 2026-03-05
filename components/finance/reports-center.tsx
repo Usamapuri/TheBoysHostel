@@ -7,15 +7,17 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { FileText, Download, FileSpreadsheet } from "lucide-react"
 import jsPDF from "jspdf"
 import autoTable from "jspdf-autotable"
+import { formatCurrency } from "@/lib/format-currency"
 import type { Transaction, Expense } from "@/lib/types"
 
 interface ReportsCenterProps {
   transactions: Transaction[]
   expenses: Expense[]
   allMonths: string[]
+  currency?: string
 }
 
-export function ReportsCenter({ transactions, expenses, allMonths }: ReportsCenterProps) {
+export function ReportsCenter({ transactions, expenses, allMonths, currency }: ReportsCenterProps) {
   const [selectedMonth, setSelectedMonth] = useState<string>(allMonths[0] || "")
 
   const generateMonthlyPDF = () => {
@@ -42,10 +44,10 @@ export function ReportsCenter({ transactions, expenses, allMonths }: ReportsCent
     doc.text("Financial Overview", 14, 50)
     
     doc.setFontSize(11)
-    doc.text(`Total Revenue: $${totalRevenue.toFixed(2)}`, 20, 60)
-    doc.text(`Total Expenses: $${totalExpenses.toFixed(2)}`, 20, 68)
+    doc.text(`Total Revenue: ${formatCurrency(totalRevenue, currency)}`, 20, 60)
+    doc.text(`Total Expenses: ${formatCurrency(totalExpenses, currency)}`, 20, 68)
     doc.setFont("helvetica", "bold")
-    doc.text(`Net Profit: $${netProfit.toFixed(2)}`, 20, 76)
+    doc.text(`Net Profit: ${formatCurrency(netProfit, currency)}`, 20, 76)
     doc.setFont("helvetica", "normal")
     
     // Top 5 Expenses
@@ -60,7 +62,7 @@ export function ReportsCenter({ transactions, expenses, allMonths }: ReportsCent
       body: sortedExpenses.map((e) => [
         e.category,
         e.description,
-        `$${e.amount.toFixed(2)}`,
+        formatCurrency(e.amount, currency),
         new Date(e.date).toLocaleDateString(),
       ]),
       theme: "grid",
