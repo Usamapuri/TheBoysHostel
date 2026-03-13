@@ -7,6 +7,7 @@ import { Label } from "@/components/ui/label"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { toast } from "sonner"
 import { updateTenantLocalization } from "@/lib/settings-actions"
+import { useTenant } from "@/lib/tenant-context"
 import type { Tenant } from "@/lib/tenant-context"
 import { Globe, Loader2 } from "lucide-react"
 import { formatCurrency } from "@/lib/format-currency"
@@ -100,6 +101,7 @@ const TIMEZONES = [
 ]
 
 export function LocalizationTab({ tenant }: LocalizationTabProps) {
+  const { refreshTenant } = useTenant()
   const [saving, setSaving] = useState(false)
   const [currency, setCurrency] = useState(tenant.currency)
   const [timezone, setTimezone] = useState(tenant.timezone)
@@ -108,6 +110,7 @@ export function LocalizationTab({ tenant }: LocalizationTabProps) {
     setSaving(true)
     try {
       await updateTenantLocalization({ currency, timezone })
+      await refreshTenant()
       toast.success("Localization settings updated")
     } catch (err) {
       toast.error(err instanceof Error ? err.message : "Failed to update settings")

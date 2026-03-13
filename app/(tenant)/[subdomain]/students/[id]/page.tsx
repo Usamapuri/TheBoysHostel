@@ -8,6 +8,8 @@ import { Badge } from "@/components/ui/badge"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { getStudentById, getStudentTransactions, getStudentActivityLogs, getRoomById, updateStudent } from "@/lib/actions"
+import { prisma } from "@/lib/db"
+import { formatCurrency } from "@/lib/format-currency"
 import { FinancialSettingsCard } from "@/components/students/financial-settings-card"
 import { DocumentsSection } from "@/components/students/documents-section"
 import {
@@ -27,12 +29,14 @@ import {
 export default async function StudentDetailPage({ params }: { params: Promise<{ id: string; subdomain: string }> }) {
   const { id, subdomain } = await params
 
-  const [student, transactions, activityLogs] = await Promise.all([
+  const [student, transactions, activityLogs, tenantData] = await Promise.all([
     getStudentById(id),
     getStudentTransactions(id),
     getStudentActivityLogs(id),
+    prisma.tenant.findUnique({ where: { subdomain }, select: { currency: true } }),
   ])
 
+  const currency = tenantData?.currency ?? "USD"
   const room = student?.roomId ? await getRoomById(student.roomId) : null
 
   if (!student) {
@@ -110,7 +114,7 @@ export default async function StudentDetailPage({ params }: { params: Promise<{ 
             </div>
             {totalDue > 0 ? (
               <Badge variant="destructive" className="bg-danger/20 text-danger border-danger/30 text-sm px-3 py-1">
-                ${totalDue} Due
+                {formatCurrency(totalDue, currency)} Due
               </Badge>
             ) : (
               <Badge variant="secondary" className="bg-success/20 text-success border-success/30 text-sm px-3 py-1">
@@ -245,7 +249,7 @@ export default async function StudentDetailPage({ params }: { params: Promise<{ 
                     </div>
                     <div>
                       <p className="text-sm text-muted-foreground">Total Paid</p>
-                      <p className="text-xl font-bold text-success">${totalPaid}</p>
+                      <p className="text-xl font-bold text-success">{formatCurrency(totalPaid, currency)}</p>
                     </div>
                   </div>
                 </CardContent>
@@ -258,7 +262,7 @@ export default async function StudentDetailPage({ params }: { params: Promise<{ 
                     </div>
                     <div>
                       <p className="text-sm text-muted-foreground">Outstanding</p>
-                      <p className="text-xl font-bold text-danger">${totalDue}</p>
+                      <p className="text-xl font-bold text-danger">{formatCurrency(totalDue, currency)}</p>
                     </div>
                   </div>
                 </CardContent>
@@ -319,7 +323,7 @@ export default async function StudentDetailPage({ params }: { params: Promise<{ 
                             {transaction.description || transaction.month}
                           </TableCell>
                           <TableCell className="text-right text-foreground font-medium">
-                            ${transaction.amount}
+                            {formatCurrency(transaction.amount, currency)}
                           </TableCell>
                           <TableCell className="text-center">
                             {transaction.status === "Paid" ? (

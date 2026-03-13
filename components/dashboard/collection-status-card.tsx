@@ -3,17 +3,20 @@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { TrendingUp, Bell } from "lucide-react"
+import { formatCurrency } from "@/lib/format-currency"
 
 interface CollectionStatusCardProps {
   totalCollected: number
   totalExpected: number
   onRemindDefaulters: () => void
+  currency?: string
 }
 
 export function CollectionStatusCard({ 
   totalCollected, 
   totalExpected,
-  onRemindDefaulters 
+  onRemindDefaulters,
+  currency,
 }: CollectionStatusCardProps) {
   const percentage = totalExpected > 0 ? Math.round((totalCollected / totalExpected) * 100) : 0
   const remaining = Math.max(0, totalExpected - totalCollected)
@@ -71,15 +74,15 @@ export function CollectionStatusCard({
           <div className="w-full space-y-2">
             <div className="flex justify-between items-center">
               <span className="text-sm text-muted-foreground">Collected:</span>
-              <span className="text-lg font-semibold text-success">${totalCollected}</span>
+              <span className="text-lg font-semibold text-success">{formatCurrency(totalCollected, currency)}</span>
             </div>
             <div className="flex justify-between items-center">
               <span className="text-sm text-muted-foreground">Expected:</span>
-              <span className="text-lg font-semibold text-foreground">${totalExpected}</span>
+              <span className="text-lg font-semibold text-foreground">{formatCurrency(totalExpected, currency)}</span>
             </div>
             <div className="flex justify-between items-center pt-2 border-t border-border">
               <span className="text-sm text-muted-foreground">Remaining:</span>
-              <span className="text-lg font-semibold text-danger">${remaining}</span>
+              <span className="text-lg font-semibold text-danger">{formatCurrency(remaining, currency)}</span>
             </div>
           </div>
 

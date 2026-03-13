@@ -8,6 +8,7 @@ import { Label } from "@/components/ui/label"
 import { toast } from "sonner"
 import { updateTenantBranding } from "@/lib/settings-actions"
 import { normalizeImageUrl } from "@/lib/normalize-image-url"
+import { useTenant } from "@/lib/tenant-context"
 import type { Tenant } from "@/lib/tenant-context"
 import { Palette, Loader2, ImageIcon, ImageOff } from "lucide-react"
 
@@ -26,6 +27,7 @@ const PRESET_BG_COLORS = [
 ]
 
 export function BrandingTab({ tenant }: BrandingTabProps) {
+  const { refreshTenant } = useTenant()
   const [saving, setSaving] = useState(false)
   const [primaryColor, setPrimaryColor] = useState(tenant.primaryColor)
   const [backgroundColor, setBackgroundColor] = useState(tenant.backgroundColor)
@@ -45,6 +47,7 @@ export function BrandingTab({ tenant }: BrandingTabProps) {
         backgroundColor,
         logoUrl: logoUrl.trim() ? normalizeImageUrl(logoUrl.trim()) : undefined,
       })
+      await refreshTenant()
       toast.success("Branding updated successfully")
     } catch (err) {
       toast.error(err instanceof Error ? err.message : "Failed to update branding")

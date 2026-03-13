@@ -27,6 +27,7 @@ interface TenantContextType {
   isLoading: boolean
   error: string | null
   subdomain: string
+  refreshTenant: () => Promise<void>
 }
 
 const TenantContext = createContext<TenantContextType | undefined>(undefined)
@@ -42,39 +43,45 @@ export function TenantProvider({
   const [isLoading, setIsLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
 
-  useEffect(() => {
-    async function fetchTenant() {
-      try {
-        setIsLoading(true)
-        setError(null)
+  async function fetchTenant() {
+    try {
+      setIsLoading(true)
+      setError(null)
 
-        // Fetch tenant data from API route
-        const response = await fetch(`/api/tenant/${subdomain}`)
-        
-        if (!response.ok) {
-          throw new Error(`Tenant not found: ${subdomain}`)
-        }
-
-        const data = await response.json()
-        setTenant(data)
-      } catch (err) {
-        console.error('Error fetching tenant:', err)
-        setError(err instanceof Error ? err.message : 'Failed to fetch tenant')
-        setTenant(null)
-      } finally {
-        setIsLoading(false)
+      const response = await fetch(`/api/tenant/${subdomain}`, { cache: 'no-store' })
+      
+      if (!response.ok) {
+        throw new Error(`Tenant not found: ${subdomain}`)
       }
-    }
 
+      const data = await response.json()
+      setTenant(data)
+    } catch (err) {
+      console.error('Error fetching tenant:', err)
+      setError(err instanceof Error ? err.message : 'Failed to fetch tenant')
+      setTenant(null)
+    } finally {
+      setIsLoading(false)
+    }
+  }
+
+  useEffect(() => {
     if (subdomain) {
       fetchTenant()
     } else {
       setIsLoading(false)
     }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [subdomain])
 
+  async function refreshTenant() {
+    if (subdomain) {
+      await fetchTenant()
+    }
+  }
+
   return (
-    <TenantContext.Provider value={{ tenant, isLoading, error, subdomain }}>
+    <TenantContext.Provider value={{ tenant, isLoading, error, subdomain, refreshTenant }}>
       {children}
     </TenantContext.Provider>
   )
@@ -93,6 +100,7 @@ export function useTenant(): TenantContextType {
         isLoading: false,
         error: null,
         subdomain: '',
+        refreshTenant: async () => {},
       }
     }
     
@@ -104,6 +112,7 @@ export function useTenant(): TenantContextType {
       isLoading: false,
       error: null,
       subdomain: '',
+      refreshTenant: async () => {},
     }
   }
 }

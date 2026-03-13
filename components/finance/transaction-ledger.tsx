@@ -7,6 +7,7 @@ import { Check, FileText, Bell, Receipt } from "lucide-react"
 import { EditRentDialog } from "./edit-rent-dialog"
 import { generateStudentStatement } from "@/lib/generate-student-statement"
 import type { Transaction, Student, Room } from "@/lib/types"
+import { formatCurrency } from "@/lib/format-currency"
 
 interface TransactionLedgerProps {
   transactions: Transaction[]
@@ -14,9 +15,10 @@ interface TransactionLedgerProps {
   rooms?: Room[]
   onMarkAsPaid: (transactionId: string) => void
   onUpdateRent: (transactionId: string, newAmount: number) => void
+  currency?: string
 }
 
-export function TransactionLedger({ transactions, students, rooms, onMarkAsPaid, onUpdateRent }: TransactionLedgerProps) {
+export function TransactionLedger({ transactions, students, rooms, onMarkAsPaid, onUpdateRent, currency }: TransactionLedgerProps) {
   const getStudentName = (studentId: string) => {
     const student = students.find((s) => s.id === studentId)
     return student?.name || "Unknown"
@@ -42,7 +44,7 @@ export function TransactionLedger({ transactions, students, rooms, onMarkAsPaid,
     if (!student) return
     
     const message = encodeURIComponent(
-      `Hi ${student.name}, this is a friendly reminder about your pending payment of $${amount}. Please complete the payment at your earliest convenience. Thank you!`
+      `Hi ${student.name}, this is a friendly reminder about your pending payment of ${formatCurrency(amount, currency)}. Please complete the payment at your earliest convenience. Thank you!`
     )
     window.open(`https://wa.me/${student.phone}?text=${message}`, '_blank')
   }
@@ -93,7 +95,7 @@ export function TransactionLedger({ transactions, students, rooms, onMarkAsPaid,
                   </Badge>
                 </TableCell>
                 <TableCell className="text-muted-foreground">{transaction.month}</TableCell>
-                <TableCell className="text-right font-medium text-foreground">${transaction.amount}</TableCell>
+                <TableCell className="text-right font-medium text-foreground">{formatCurrency(transaction.amount, currency)}</TableCell>
                 <TableCell className="text-center">
                   {transaction.status === "Paid" ? (
                     <Badge className="bg-success/20 text-success border-success/30">Paid</Badge>

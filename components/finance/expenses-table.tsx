@@ -5,13 +5,15 @@ import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { Trash2 } from "lucide-react"
 import type { Expense } from "@/lib/types"
+import { formatCurrency } from "@/lib/format-currency"
 
 interface ExpensesTableProps {
   expenses: Expense[]
   onDeleteExpense: (expenseId: string) => void
+  currency?: string
 }
 
-export function ExpensesTable({ expenses, onDeleteExpense }: ExpensesTableProps) {
+export function ExpensesTable({ expenses, onDeleteExpense, currency }: ExpensesTableProps) {
   const getCategoryColor = (category: string) => {
     switch (category) {
       case "Utility":
@@ -58,7 +60,7 @@ export function ExpensesTable({ expenses, onDeleteExpense }: ExpensesTableProps)
                   </Badge>
                 </TableCell>
                 <TableCell className="text-foreground">{expense.description}</TableCell>
-                <TableCell className="text-right font-medium text-danger">${expense.amount}</TableCell>
+                <TableCell className="text-right font-medium text-danger">{formatCurrency(expense.amount, currency)}</TableCell>
                 <TableCell className="text-center">
                   <Button
                     size="sm"

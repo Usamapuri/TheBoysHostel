@@ -121,6 +121,7 @@ export default function TenantDashboard() {
                   overdueStudentsCount={kpis.overdueStudentsCount}
                   highPriorityMaintenance={kpis.highPriorityMaintenance}
                   pendingMaintenance={kpis.pendingMaintenance}
+                  currency={tenant?.currency}
                   onNavigateToStudents={() => {
                     setShowDefaultersFilter(true)
                     setActiveTab("students")
@@ -135,6 +136,7 @@ export default function TenantDashboard() {
                   totalCollected={collectedThisMonth}
                   totalExpected={expectedRevenue}
                   onRemindDefaulters={handleRemindDefaulters}
+                  currency={tenant?.currency}
                 />
               </div>
               
@@ -190,6 +192,7 @@ export default function TenantDashboard() {
                 rooms={data.rooms}
                 onMarkAsPaid={handleMarkAsPaid}
                 onUpdateRent={handleUpdateRent}
+                currency={tenant?.currency}
               />
             </div>
           </div>
@@ -262,12 +265,13 @@ export default function TenantDashboard() {
               totalExpenses={monthlyKPIs.totalExpenses}
               netProfit={monthlyKPIs.netProfit}
               outstandingDues={monthlyKPIs.totalOutstanding}
+              currency={tenant?.currency}
             />
 
             {/* Financial Insights */}
             <div>
               <h3 className="text-lg font-semibold text-foreground mb-4">Financial Insights</h3>
-              <FinancialInsights transactions={data.transactions} expenses={data.expenses} />
+              <FinancialInsights transactions={data.transactions} expenses={data.expenses} currency={tenant?.currency} />
             </div>
 
             <Tabs defaultValue="income" className="w-full">
@@ -286,13 +290,14 @@ export default function TenantDashboard() {
                   rooms={data.rooms}
                   onMarkAsPaid={handleMarkAsPaid}
                   onUpdateRent={handleUpdateRent}
+                  currency={tenant?.currency}
                 />
               </TabsContent>
 
               {/* Expenses tab with expense table */}
               <TabsContent value="expenses" className="space-y-4">
                 <AddExpenseDialog onAddExpense={handleAddExpense} />
-                <ExpensesTable expenses={filteredExpenses} onDeleteExpense={handleDeleteExpense} />
+                <ExpensesTable expenses={filteredExpenses} onDeleteExpense={handleDeleteExpense} currency={tenant?.currency} />
               </TabsContent>
 
               {/* Reports tab */}
@@ -301,6 +306,7 @@ export default function TenantDashboard() {
                   transactions={data.transactions} 
                   expenses={data.expenses}
                   allMonths={allMonths}
+                  currency={tenant?.currency}
                 />
               </TabsContent>
             </Tabs>

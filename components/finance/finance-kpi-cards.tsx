@@ -2,15 +2,17 @@
 
 import { Card, CardContent } from "@/components/ui/card"
 import { TrendingUp, TrendingDown, DollarSign, AlertCircle } from "lucide-react"
+import { formatCurrency } from "@/lib/format-currency"
 
 interface FinanceKPICardsProps {
   totalRevenue: number
   totalExpenses: number
   netProfit: number
   outstandingDues: number
+  currency?: string
 }
 
-export function FinanceKPICards({ totalRevenue, totalExpenses, netProfit, outstandingDues }: FinanceKPICardsProps) {
+export function FinanceKPICards({ totalRevenue, totalExpenses, netProfit, outstandingDues, currency }: FinanceKPICardsProps) {
   return (
     <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
       <Card className="bg-card border-border">
@@ -18,7 +20,7 @@ export function FinanceKPICards({ totalRevenue, totalExpenses, netProfit, outsta
           <div className="flex items-center justify-between">
             <div>
               <p className="text-sm text-muted-foreground">Total Revenue</p>
-              <p className="text-2xl font-bold text-foreground">${totalRevenue}</p>
+              <p className="text-2xl font-bold text-foreground">{formatCurrency(totalRevenue, currency)}</p>
             </div>
             <TrendingUp className="h-8 w-8 text-success" />
           </div>
@@ -30,7 +32,7 @@ export function FinanceKPICards({ totalRevenue, totalExpenses, netProfit, outsta
           <div className="flex items-center justify-between">
             <div>
               <p className="text-sm text-muted-foreground">Total Expenses</p>
-              <p className="text-2xl font-bold text-foreground">${totalExpenses}</p>
+              <p className="text-2xl font-bold text-foreground">{formatCurrency(totalExpenses, currency)}</p>
             </div>
             <TrendingDown className="h-8 w-8 text-danger" />
           </div>
@@ -42,7 +44,7 @@ export function FinanceKPICards({ totalRevenue, totalExpenses, netProfit, outsta
           <div className="flex items-center justify-between">
             <div>
               <p className="text-sm text-muted-foreground">Net Profit</p>
-              <p className={`text-2xl font-bold ${netProfit >= 0 ? "text-success" : "text-danger"}`}>${netProfit}</p>
+              <p className={`text-2xl font-bold ${netProfit >= 0 ? "text-success" : "text-danger"}`}>{formatCurrency(netProfit, currency)}</p>
             </div>
             <DollarSign className={`h-8 w-8 ${netProfit >= 0 ? "text-success" : "text-danger"}`} />
           </div>
@@ -54,7 +56,7 @@ export function FinanceKPICards({ totalRevenue, totalExpenses, netProfit, outsta
           <div className="flex items-center justify-between">
             <div>
               <p className="text-sm text-muted-foreground">Outstanding Dues</p>
-              <p className="text-2xl font-bold text-danger">${outstandingDues}</p>
+              <p className="text-2xl font-bold text-danger">{formatCurrency(outstandingDues, currency)}</p>
             </div>
             <AlertCircle className="h-8 w-8 text-danger" />
           </div>
